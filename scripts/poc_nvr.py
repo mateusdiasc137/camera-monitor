@@ -23,10 +23,9 @@ import subprocess
 import sys
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
 
-from _common import DATA_DIR, ROOT, load_dotenv, mask, mediamtx_binary, render_template
+from _common import DATA_DIR, ROOT, camera_rtsp_url, load_dotenv, mask, mediamtx_binary, render_template
 
 TEMPLATE = ROOT / "integrations" / "mediamtx" / "mediamtx.poc.yml.tmpl"
 POC_DIR = DATA_DIR / "poc"
@@ -37,19 +36,12 @@ FAKE_SOURCES = {
 }
 
 
-def real_sources() -> dict[str, str]:
+def real_sources() -> tuple[dict[str, str], str]:
     env = load_dotenv()
-    missing = [k for k in ("NVR_CAM_HOST", "NVR_CAM_RTSP_PATH", "NVR_CAM_USER", "NVR_CAM_PASSWORD")
-               if not env.get(k) or env[k] == "CHANGE_ME"]
-    if missing:
-        raise SystemExit(f"Preencha no .env: {', '.join(missing)} (veja .env.example)")
-    user = urllib.parse.quote(env["NVR_CAM_USER"], safe="")
-    password = urllib.parse.quote(env["NVR_CAM_PASSWORD"], safe="")
-    host, port = env["NVR_CAM_HOST"], env.get("NVR_CAM_RTSP_PORT", "554")
-    sources = {"cam": f"rtsp://{user}:{password}@{host}:{port}{env['NVR_CAM_RTSP_PATH']}"}
+    sources = {"cam": camera_rtsp_url(env)}
     if env.get("NVR_CAM_RTSP_SUBPATH"):
-        sources["camsub"] = f"rtsp://{user}:{password}@{host}:{port}{env['NVR_CAM_RTSP_SUBPATH']}"
-    return sources
+        sources["camsub"] = camera_rtsp_url(env, "NVR_CAM_RTSP_SUBPATH")
+    return sources, env["NVR_CAM_PASSWORD"]
 
 
 def sha256_hash(password: str) -> str:
@@ -95,7 +87,7 @@ def main() -> int:
     parser.add_argument("--segment", default="1m", help="recordSegmentDuration (ex.: 1m, 5m)")
     args = parser.parse_args()
 
-    sources = FAKE_SOURCES if args.source == "fake" else real_sources()
+    sources, cam_password = (FAKE_SOURCES, "") if args.source == "fake" else real_sources()
     viewer_pass = secrets.token_urlsafe(12)
     record_dir = (POC_DIR / "recordings").as_posix()
     config = POC_DIR / "mediamtx.yml"
@@ -120,7 +112,7 @@ def main() -> int:
                 "sourceOnDemand": False,
                 "record": name == "cam",
             })
-            print(f"path '{name}' cadastrado: {mask(url)}")
+            print(f"path '{name}' cadastrado: {mask(url, cam_password)}", flush=True)
 
         ip = lan_ip()
         print(f"""

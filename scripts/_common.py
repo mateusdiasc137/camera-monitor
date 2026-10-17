@@ -17,11 +17,38 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 
 _URL_CREDENTIALS = re.compile(r"(?P<scheme>[a-z][a-z0-9+.-]*://)[^/@\s]+@", re.IGNORECASE)
+# Formato Xiongmai com credenciais no caminho: /user=admin&password=xyz&channel=1 (ou separado por '_').
+_PATH_CREDENTIALS = re.compile(r"(?P<key>\b(?:user|username|password|pwd|pass)=)[^&_;\s/?]*", re.IGNORECASE)
 
 
-def mask(text: str) -> str:
-    """Remove usuário/senha de URLs (rtsp://user:pass@host -> rtsp://***@host)."""
-    return _URL_CREDENTIALS.sub(r"\g<scheme>***@", text)
+def mask(text: str, *secrets: str) -> str:
+    """Remove credenciais de URLs e de caminhos, além de quaisquer segredos informados explicitamente."""
+    for secret in secrets:
+        if secret:
+            text = text.replace(secret, "***")
+    text = _URL_CREDENTIALS.sub(r"\g<scheme>***@", text)
+    return _PATH_CREDENTIALS.sub(r"\g<key>***", text)
+
+
+def camera_rtsp_url(env: dict[str, str], path_key: str = "NVR_CAM_RTSP_PATH") -> str:
+    """Monta a URL RTSP da câmera a partir do .env.
+
+    Se o caminho contiver {user}/{password} (formato Xiongmai com credenciais no caminho), eles são
+    substituídos ali; caso contrário, as credenciais vão no formato padrão rtsp://user:pass@host.
+    """
+    from urllib.parse import quote
+
+    missing = [k for k in ("NVR_CAM_HOST", path_key, "NVR_CAM_USER", "NVR_CAM_PASSWORD")
+               if not env.get(k) or env[k] == "CHANGE_ME"]
+    if missing:
+        raise SystemExit(f"Preencha no .env: {', '.join(missing)} (veja .env.example)")
+    user, password = env["NVR_CAM_USER"], env["NVR_CAM_PASSWORD"]
+    host, port, path = env["NVR_CAM_HOST"], env.get("NVR_CAM_RTSP_PORT", "554"), env[path_key]
+    if not path.startswith("/"):
+        path = "/" + path
+    if "{user}" in path or "{password}" in path:
+        return f"rtsp://{host}:{port}" + path.replace("{user}", user).replace("{password}", password)
+    return f"rtsp://{quote(user, safe='')}:{quote(password, safe='')}@{host}:{port}{path}"
 
 
 def load_dotenv(path: Path = ROOT / ".env") -> dict[str, str]:
