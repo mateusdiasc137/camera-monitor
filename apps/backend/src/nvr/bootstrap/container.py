@@ -28,8 +28,9 @@ from nvr.identity.adapters.sql_repositories import SqlSessionRepository, SqlUser
 from nvr.identity.application import Authenticate, CreateUser, Login, Logout
 from nvr.persistence.database import create_engine
 from nvr.recordings.adapters.fs_store import FileSegmentStore
+from nvr.recordings.adapters.mediamtx_playback import MediaMtxPlayback
 from nvr.recordings.adapters.sql_repositories import SqlSegmentIndex, SqlStorageLocations
-from nvr.recordings.application import EnsureStorageLocation, IndexSegments, ListRecordings
+from nvr.recordings.application import EnsureStorageLocation, IndexSegments, ListRecordings, OpenRecording
 from nvr.recordings.domain import RECORD_FILENAME_TEMPLATE
 from nvr.shared.clock import SystemClock
 from nvr.shared.events import EventBus
@@ -78,12 +79,15 @@ class Container:
     index_segments: IndexSegments
     list_recordings: ListRecordings
     segment_index: SqlSegmentIndex
+    open_recording: OpenRecording
+    playback: MediaMtxPlayback
     whep: MediaMtxWhep
 
     async def aclose(self) -> None:
         await self.relays.stop_all()
         await self.media_api.aclose()
         await self.whep.aclose()
+        await self.playback.aclose()
         await self.engine.dispose()
 
 
@@ -123,6 +127,9 @@ def build_container(
     # %z no nome: início sem ambiguidade de fuso/horário de verão (o MediaMTX entende ao reproduzir).
     record_path = f"{recordings_dir.as_posix()}/%path/{RECORD_FILENAME_TEMPLATE}"
     locations = SqlStorageLocations(engine, clock)
+    playback = MediaMtxPlayback(
+        settings.mediamtx_playback_url, AuthorizeMediaAccess.READER_USER, reader_secret
+    )
     segment_index = SqlSegmentIndex(engine, clock)
     status_log = SqlCameraStatusLog(engine)
     return Container(
@@ -144,6 +151,8 @@ def build_container(
         index_segments=IndexSegments(locations, segment_index, FileSegmentStore(), cameras),
         list_recordings=ListRecordings(cameras, segment_index, status_log, clock),
         segment_index=segment_index,
+        open_recording=OpenRecording(cameras, playback),
+        playback=playback,
         monitor_camera_health=MonitorCameraHealth(cameras, media_api, relays, status_log, event_bus, clock),
         get_camera_status_history=GetCameraStatusHistory(status_log),
         event_bus=event_bus,

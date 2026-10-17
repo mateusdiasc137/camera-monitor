@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from datetime import datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import AwareDatetime, BaseModel
 
 from nvr.recordings.application import RecordingsView
@@ -59,3 +62,36 @@ async def list_recordings(
     start = start or end - timedelta(hours=24)
     view = await request.app.state.use_cases.list_recordings(camera_id, start, end)
     return RecordingsOut.from_view(view)
+
+
+def _download_name(camera_name: str, start: datetime) -> str:
+    """Nome ASCII seguro para o cabeçalho: "camera-da-frente_2026-10-17_18-04-57.mp4"."""
+    ascii_name = unicodedata.normalize("NFKD", camera_name).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-").lower() or "camera"
+    return f"{slug}_{start.astimezone().strftime('%Y-%m-%d_%H-%M-%S')}.mp4"
+
+
+@router.get(
+    "/{camera_id}/video",
+    response_class=StreamingResponse,
+    responses={
+        200: {"content": {"video/mp4": {}}, "description": "trecho gravado (MP4 fragmentado ou comum)"}
+    },
+)
+async def recording_video(
+    request: Request,
+    camera_id: str,
+    start: AwareDatetime,
+    duration: Annotated[float, Query(gt=0, le=7200, description="segundos")],
+    format: Literal["fmp4", "mp4"] = "fmp4",
+    download: bool = False,
+) -> StreamingResponse:
+    """Reprodução (fmp4, progressivo) ou download (mp4) de um trecho.
+
+    Sem suporte a Range (o MediaMTX gera o trecho na hora): para pular, peça outro início.
+    """
+    clip = await request.app.state.use_cases.open_recording(camera_id, start, duration, format)
+    headers = {"Cache-Control": "no-store"}
+    if download:
+        headers["Content-Disposition"] = f'attachment; filename="{_download_name(clip.camera_name, start)}"'
+    return StreamingResponse(clip.stream.chunks(), media_type="video/mp4", headers=headers)

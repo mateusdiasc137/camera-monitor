@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -52,3 +53,16 @@ class SegmentStore(Protocol):
         ...
 
     def probe(self, root: Path, rel_path: str) -> ProbedSegment: ...
+
+
+class RecordingStream(Protocol):
+    """Fluxo de bytes de um trecho gravado, aberto no servidor de playback (já validado: 200 OK)."""
+
+    content_type: str
+
+    def chunks(self) -> AsyncIterator[bytes]: ...
+    async def aclose(self) -> None: ...
+
+
+class PlaybackServer(Protocol):
+    async def open(self, path: str, start: datetime, duration_s: float, fmt: str) -> RecordingStream: ...

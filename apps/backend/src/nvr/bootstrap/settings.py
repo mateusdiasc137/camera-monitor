@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     media_enabled: bool = Field(default=True, description="liga a reconciliação com o MediaMTX e os relays")
     mediamtx_api_url: str = "http://127.0.0.1:9997"
     mediamtx_rtsp_address: str = Field(default="127.0.0.1:8554", description="onde os relays publicam")
+    mediamtx_playback_url: str = Field(
+        default="http://127.0.0.1:9996", description="servidor de playback do MediaMTX, só no loopback"
+    )
     mediamtx_webrtc_url: str = Field(
         default="http://127.0.0.1:8889", description="servidor WebRTC (WHEP) do MediaMTX, só no loopback"
     )

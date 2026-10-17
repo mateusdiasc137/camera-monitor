@@ -3,10 +3,12 @@ import { useState } from 'react'
 import { AuthGate } from './features/auth/AuthGate'
 import { CamerasPage } from './features/cameras/CamerasPage'
 import { LivePage } from './features/live/LivePage'
+import { RecordingsPage } from './features/recordings/RecordingsPage'
 import { SystemStatus } from './features/system/SystemStatus'
 
 const TABS = [
   { id: 'live', label: 'Ao vivo' },
+  { id: 'recordings', label: 'Gravações' },
   { id: 'cameras', label: 'Câmeras' },
   { id: 'system', label: 'Sistema' },
 ] as const
@@ -36,6 +38,7 @@ export default function App() {
               ))}
             </nav>
             {tab === 'live' && <LivePage />}
+            {tab === 'recordings' && <RecordingsPage />}
             {tab === 'cameras' && <CamerasPage isAdmin={user.role === 'admin'} />}
             {tab === 'system' && <SystemStatus />}
           </>

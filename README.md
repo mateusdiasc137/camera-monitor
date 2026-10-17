@@ -7,7 +7,9 @@ NVR (Network Video Recorder) self-hosted para câmeras IP na rede local: ao vivo
 - Decisões (ADRs): [docs/decisions/](docs/decisions/)
 - Compatibilidade de câmeras e PoCs: [docs/compatibility/](docs/compatibility/)
 
-**Estado:** Fase 1 (MVP) em andamento: login, cadastro de câmeras com teste de conexão, estado em tempo real, ao vivo na interface (WebRTC) e gravação contínua via MediaMTX + relays FFmpeg comandados pelo backend. Playback de gravações ainda não (F1-10).
+**Estado:** Fase 1 (MVP) em andamento: login, cadastro de câmeras com teste de conexão, estado em tempo real, ao vivo (WebRTC), gravação contínua, linha do tempo com reprodução e download. Ainda faltam: cota/substituição e local de gravação pela UI (F1-11), HTTPS e serviços (F1-18/19).
+
+Navegador recomendado: **Google Chrome** (decodifica o H.265 das câmeras iCSee; o Edge no Windows precisa da extensão HEVC).
 
 ## Desenvolvimento
 

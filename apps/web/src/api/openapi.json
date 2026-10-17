@@ -1406,6 +1406,92 @@
         ]
       }
     },
+    "/api/v1/recordings/{camera_id}/video": {
+      "get": {
+        "description": "Reprodução (fmp4, progressivo) ou download (mp4) de um trecho.\n\nSem suporte a Range (o MediaMTX gera o trecho na hora): para pular, peça outro início.",
+        "operationId": "recording_video_api_v1_recordings__camera_id__video_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "camera_id",
+            "required": true,
+            "schema": {
+              "title": "Camera Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "description": "segundos",
+            "in": "query",
+            "name": "duration",
+            "required": true,
+            "schema": {
+              "description": "segundos",
+              "exclusiveMinimum": 0,
+              "maximum": 7200,
+              "title": "Duration",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "fmp4",
+              "enum": [
+                "fmp4",
+                "mp4"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "download",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Download",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "video/mp4": {}
+            },
+            "description": "trecho gravado (MP4 fragmentado ou comum)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recording Video",
+        "tags": [
+          "recordings"
+        ]
+      }
+    },
     "/api/v1/system/health": {
       "get": {
         "operationId": "get_health_api_v1_system_health_get",

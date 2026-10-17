@@ -496,3 +496,118 @@ code {
   font-size: 0.85rem;
   margin: 6px 0 0;
 }
+
+.recordings-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+select {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.timeline {
+  margin: 12px 0;
+}
+
+.timeline__bar {
+  position: relative;
+  height: 40px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.timeline__bar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.timeline__rec {
+  background: var(--ok);
+}
+
+.timeline__gap--paused {
+  background: repeating-linear-gradient(45deg, var(--border) 0 4px, transparent 4px 8px);
+}
+
+.timeline__gap--camera_unavailable {
+  background: color-mix(in srgb, var(--down) 45%, transparent);
+}
+
+.timeline__gap--disabled {
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+
+.timeline__gap--unknown {
+  background: transparent;
+}
+
+.timeline__bar .timeline__cursor {
+  width: 2px;
+  background: #2457c5;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+.timeline__ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.timeline__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  vertical-align: -2px;
+}
+
+.recording-player {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 1100px;
+  margin-top: 8px;
+}
+
+.download-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.button-link {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+}

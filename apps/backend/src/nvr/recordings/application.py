@@ -20,10 +20,17 @@ from nvr.recordings.domain import (
     merge_intervals,
     parse_segment_filename,
 )
-from nvr.recordings.ports import SegmentIndex, SegmentStore, StorageLocation, StorageLocations
+from nvr.recordings.ports import (
+    PlaybackServer,
+    RecordingStream,
+    SegmentIndex,
+    SegmentStore,
+    StorageLocation,
+    StorageLocations,
+)
 from nvr.shared.clock import Clock
 from nvr.shared.errors import NotFound, ValidationFailed
-from nvr.streaming.domain import parse_path_name
+from nvr.streaming.domain import parse_path_name, path_name
 from nvr.streaming.ports import CameraStatusLog
 
 log = logging.getLogger(__name__)
@@ -186,3 +193,36 @@ class ListRecordings:
         clipped = clip(intervals, start, effective_end)
         gaps = find_gaps(clipped, start, effective_end, history) if start < effective_end else []
         return RecordingsView(camera_id, start, end, clipped, gaps, len(segments), recording_now)
+
+
+MAX_CLIP = timedelta(hours=2)
+CLIP_FORMATS = ("fmp4", "mp4")
+
+
+@dataclass(frozen=True)
+class RecordingClip:
+    stream: RecordingStream
+    camera_name: str
+    start: datetime
+    duration_s: float
+    fmt: str
+
+
+class OpenRecording:
+    """Abre um trecho gravado no servidor de playback do MediaMTX (via backend, ADR-003)."""
+
+    def __init__(self, cameras: CameraRepository, playback: PlaybackServer) -> None:
+        self._cameras, self._playback = cameras, playback
+
+    async def __call__(self, camera_id: str, start: datetime, duration_s: float, fmt: str) -> RecordingClip:
+        if start.tzinfo is None:
+            raise ValidationFailed("informe o início com fuso horário (ISO 8601)")
+        if not 0 < duration_s <= MAX_CLIP.total_seconds():
+            raise ValidationFailed("duração deve ser maior que zero e de no máximo 2 h")
+        if fmt not in CLIP_FORMATS:
+            raise ValidationFailed("formato deve ser fmp4 ou mp4")
+        camera = await self._cameras.get(camera_id)
+        if camera is None:
+            raise NotFound("câmera não encontrada")
+        stream = await self._playback.open(path_name(camera.id, StreamProfile.MAIN), start, duration_s, fmt)
+        return RecordingClip(stream, camera.name, start, duration_s, fmt)

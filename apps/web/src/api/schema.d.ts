@@ -215,6 +215,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recordings/{camera_id}/video": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recording Video
+         * @description Reprodução (fmp4, progressivo) ou download (mp4) de um trecho.
+         *
+         *     Sem suporte a Range (o MediaMTX gera o trecho na hora): para pular, peça outro início.
+         */
+        get: operations["recording_video_api_v1_recordings__camera_id__video_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/health": {
         parameters: {
             query?: never;
@@ -983,6 +1005,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecordingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recording_video_api_v1_recordings__camera_id__video_get: {
+        parameters: {
+            query: {
+                start: string;
+                /** @description segundos */
+                duration: number;
+                format?: "fmp4" | "mp4";
+                download?: boolean;
+            };
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description trecho gravado (MP4 fragmentado ou comum) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "video/mp4": unknown;
                 };
             };
             /** @description Validation Error */

@@ -21,7 +21,7 @@ from nvr.cameras.application import (
 from nvr.http.routers import auth, cameras, internal, live, recordings, status, system
 from nvr.http.security import SameOriginMiddleware, current_user
 from nvr.identity.application import Authenticate, Login, Logout
-from nvr.recordings.application import ListRecordings
+from nvr.recordings.application import ListRecordings, OpenRecording
 from nvr.shared import errors
 from nvr.shared.events import EventBus
 from nvr.streaming.application import (
@@ -80,6 +80,8 @@ class UseCases(Protocol):
     def live_viewing(self) -> LiveViewing: ...
     @property
     def list_recordings(self) -> ListRecordings: ...
+    @property
+    def open_recording(self) -> OpenRecording: ...
 
 
 def create_app(

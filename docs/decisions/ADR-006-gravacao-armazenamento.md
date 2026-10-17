@@ -1,6 +1,6 @@
 # ADR-006 — Gravação, índice e política de armazenamento
 
-**Estado:** aceito, exceto o tratamento do áudio (decidir na F1-10) · **Data:** 17/10/2026 · **Revisão (F1-09):** índice por varredura; nome com fuso
+**Estado:** aceito · **Data:** 17/10/2026 · **Revisão (F1-09):** índice por varredura; nome com fuso
 
 ## Contexto
 
@@ -22,9 +22,9 @@ Requisitos do usuário: ligar/desligar a gravação por câmera, escolher o loca
   - **Nome dos arquivos com fuso** (`%Y-%m-%d_%H-%M-%S-%f%z`): sem ambiguidade de horário de verão; o MediaMTX entende ao reproduzir. Arquivos antigos (sem `%z`) continuam indexados (hora local do servidor), mas o playback do MediaMTX não os encontra pelo padrão novo.
 - **Gaps** distinguem "pausa do usuário", "câmera indisponível", "desativada" e "desconhecido" a partir do histórico de estado (F1-07). O estado é lido até 15 s dentro do buraco (atraso da amostragem) e buracos longos são divididos nas mudanças de estado (ex.: pausa → servidor de mídia fora → pausa).
 
-## Pendente
-
-- **Áudio:** o G.711 da câmera é gravado como LPCM no fMP4. Na F1-10, testar o playback no Chrome. Se não tocar, a opção preferida é transcodificar **só o áudio** no relay (`-c:v copy -c:a libopus`, ou AAC), com custo baixo. Isso também traria áudio ao HLS.
+- **Reprodução e download (F1-10):** pelo backend (`GET /api/v1/recordings/{id}/video`), que repassa ao servidor de playback do MediaMTX (`/get`, só loopback) com a credencial `reader` — mesmo modelo do ao vivo (ADR-003). `fmp4` progressivo para assistir, `mp4` para baixar; até 2 h por pedido; sem `Range` (o MediaMTX gera o trecho na hora), então "pular" = pedir outro início.
+- **Áudio gravado (decidido na F1-10): sem transcodificação.** O G.711 vira LPCM (`pcm_s16be`) no fMP4. Ensaio no Chrome real (Playwright) com gravação da X6C-WEQ: o `<video>` toca e **decodifica o áudio LPCM** (o `canPlayType("ipcm")` responde vazio, mas a reprodução real funciona). Mantido sem recodificar.
+- **Navegadores:** Chrome (Windows) decodifica H.265 em WebRTC e no `<video>`. O Edge desta máquina **não** (no Windows depende da extensão "HEVC Video Extensions"): a interface já avisa quando o navegador não informa suporte a H.265.
 
 ## Consequências
 
