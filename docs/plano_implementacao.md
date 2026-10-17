@@ -22,7 +22,12 @@
 - **H.265 + G.711 funcionam ao vivo no Chrome** (celular e PC) sem transcodificação; o HLS fica sem áudio.
 - **Eventos de pessoa vêm do DVRIP** (`appEventHumanDetectAlarm`); o ONVIF não tem tópico de pessoa.
 - **Câmera de duas lentes empilhadas** no mesmo stream (fixa + PTZ): a UI deve permitir ver as metades separadamente.
-- Próximo passo: **Fase 1, a partir da F1-01**.
+
+**Fase 1 em andamento:**
+- [x] F1-01 esqueleto backend/UI + CI Ubuntu/Windows (contratos de arquitetura, cliente tipado, gitleaks)
+- [x] F1-02 persistência SQLite + Alembic (migrações 0001–0002)
+- [x] F1-03 autenticação do painel (backend + UI de login)
+- [ ] F1-04 cadastro de câmeras (próximo)
 
 > Convenções: cada tarefa tem ID (`F1-07`), entregáveis, critério de "pronto" verificável e dependências.
 > 🔒 = exige autorização explícita do usuário antes de executar (altera estado da câmera ou age fisicamente).

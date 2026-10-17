@@ -7,7 +7,25 @@ NVR (Network Video Recorder) self-hosted para câmeras IP na rede local: ao vivo
 - Decisões (ADRs): [docs/decisions/](docs/decisions/)
 - Compatibilidade de câmeras e PoCs: [docs/compatibility/](docs/compatibility/)
 
-**Estado:** Fase 0 (descoberta e fundação). Ainda não há aplicação; só scripts de prova de conceito.
+**Estado:** Fase 1 (MVP) em andamento: backend com login e banco; UI com tela de login. Câmeras, ao vivo e gravações ainda estão só na PoC.
+
+## Desenvolvimento
+
+```bash
+# backend (apps/backend)
+cd apps/backend
+uv sync
+uv run nvr create-user admin                       # pede a senha no terminal
+NVR_COOKIE_SECURE=false uv run nvr serve           # http://127.0.0.1:8000 (só em dev: cookie sem HTTPS)
+uv run pytest && uv run mypy && uv run lint-imports
+
+# UI (apps/web), em outro terminal
+cd apps/web
+npm ci
+npm run dev                                        # http://localhost:5173
+```
+
+No PowerShell, defina a variável com `$env:NVR_COOKIE_SECURE="false"` antes de `uv run nvr serve`.
 
 ## Pré-requisitos
 
