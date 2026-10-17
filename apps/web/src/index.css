@@ -309,3 +309,69 @@ label.checkbox {
 code {
   font-size: 0.85em;
 }
+
+.status-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.status-pill {
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 2px 10px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--muted);
+}
+
+.status-pill--online {
+  background: var(--ok);
+}
+
+.status-pill--degraded,
+.status-pill--starting {
+  background: var(--degraded);
+}
+
+.status-pill--offline,
+.status-pill--auth_error,
+.status-pill--not_found {
+  background: var(--down);
+}
+
+.status-pill--unknown {
+  background: transparent;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  font-weight: 400;
+}
+
+.recording-dot {
+  color: var(--down);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.recording-dot::before {
+  content: '●';
+  margin-right: 4px;
+}
+
+.status-history {
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.status-history summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.status-history ol {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}

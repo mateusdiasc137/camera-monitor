@@ -157,3 +157,15 @@ audit_log = Table(
     Column("detail", JSON, nullable=True),
 )
 Index("ix_audit_log_at", audit_log.c.at)
+
+camera_status_events = Table(
+    "camera_status_events",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("camera_id", String(36), ForeignKey("cameras.id", ondelete="CASCADE"), nullable=False),
+    Column("at", UTCDateTime, nullable=False),
+    Column("state", String(16), nullable=False),
+    Column("detail", String(255), nullable=False),
+    Column("recording", Boolean, nullable=False),
+)
+Index("ix_camera_status_events_camera_at", camera_status_events.c.camera_id, camera_status_events.c.at)

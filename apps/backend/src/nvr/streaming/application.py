@@ -4,12 +4,28 @@ import asyncio
 import hmac
 import ipaddress
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from nvr.cameras.domain import Camera, StreamProfile, rtsp_url
 from nvr.cameras.ports import CameraRepository, SecretStore
-from nvr.streaming.domain import PathSpec, RelaySpec, parse_path_name, path_name
-from nvr.streaming.ports import MediaServer, RelaySupervisor
+from nvr.shared.clock import Clock
+from nvr.shared.errors import AppError
+from nvr.shared.events import Event, EventPublisher
+from nvr.streaming.domain import (
+    CameraHealth,
+    CameraState,
+    PathSpec,
+    PathState,
+    ProfileSignals,
+    RelaySpec,
+    RelayStatus,
+    derive_health,
+    parse_path_name,
+    path_name,
+)
+from nvr.streaming.ports import CameraStatusLog, MediaServer, RelaySupervisor
 
 log = logging.getLogger(__name__)
 
@@ -142,3 +158,118 @@ class AuthorizeMediaAccess:
         if req.action in ("api", "metrics"):
             return _is_loopback(req.ip)
         return False
+
+
+@dataclass(frozen=True)
+class CameraHealthView:
+    health: CameraHealth
+    since: datetime  # desde quando está nesse estado
+
+
+class MonitorCameraHealth:
+    """Amostra os sinais de mídia e mantém o estado de cada câmera; publica e grava só as transições."""
+
+    def __init__(
+        self,
+        cameras: CameraRepository,
+        media: MediaServer,
+        relays: RelaySupervisor,
+        status_log: CameraStatusLog,
+        events: EventPublisher,
+        clock: Clock,
+    ) -> None:
+        self._cameras, self._media, self._relays = cameras, media, relays
+        self._log, self._events, self._clock = status_log, events, clock
+        self._current: dict[str, CameraHealthView] = {}
+        self._last_bytes: dict[str, int] = {}
+        self._loaded = False
+        self._media_down = False
+        # O MediaMTX guarda os paths só em memória: ao voltar, é preciso reconciliar já (não em até 15 s).
+        self.on_media_recovered: Callable[[], None] | None = None
+
+    def current(self) -> dict[str, CameraHealthView]:
+        return dict(self._current)
+
+    async def __call__(self) -> None:
+        if not self._loaded:
+            self._current = {
+                cid: CameraHealthView(health, at) for cid, (at, health) in (await self._log.latest()).items()
+            }
+            self._loaded = True
+
+        cameras = await self._cameras.list()
+        relay_statuses = self._relays.statuses()
+        try:
+            states = await self._media.states()
+            media_error: str | None = None
+        except AppError as exc:
+            states, media_error = {}, exc.message
+        if self._media_down and media_error is None and self.on_media_recovered is not None:
+            log.info("servidor de mídia voltou; reconciliando imediatamente")
+            self.on_media_recovered()
+        self._media_down = media_error is not None
+
+        now = self._clock.now()
+        seen: set[str] = set()
+        for camera in cameras:
+            seen.add(camera.id)
+            if media_error is not None and camera.enabled:
+                health = CameraHealth(
+                    camera.id, CameraState.OFFLINE, "servidor de mídia (MediaMTX) indisponível", False
+                )
+            else:
+                health = derive_health(
+                    camera.id,
+                    enabled=camera.enabled,
+                    record_enabled=camera.recording_enabled,
+                    main=self._signals(path_name(camera.id, StreamProfile.MAIN), states, relay_statuses),
+                    sub=self._signals(path_name(camera.id, StreamProfile.SUB), states, relay_statuses),
+                    has_sub=camera.sub_path is not None,
+                )
+            previous = self._current.get(camera.id)
+            if health.same_condition(previous.health if previous else None):
+                continue
+            self._current[camera.id] = CameraHealthView(health, now)
+            await self._log.record(camera.id, now, health)
+            self._events.publish(Event("camera.status", _health_payload(health, now)))
+            log.info("câmera %s: %s (%s)", camera.name, health.state.value, health.detail)
+
+        for removed in self._current.keys() - seen:
+            del self._current[removed]
+
+    def _signals(
+        self, name: str, states: dict[str, PathState], relays: dict[str, RelayStatus]
+    ) -> ProfileSignals | None:
+        state, relay = states.get(name), relays.get(name)
+        if state is None and relay is None:
+            return None
+        received = state.bytes_received if state else 0
+        previous = self._last_bytes.get(name)
+        self._last_bytes[name] = received
+        growing = previous is None or received > previous  # 1ª amostra: sem base de comparação
+        return ProfileSignals(
+            path_ready=bool(state and state.ready),
+            bytes_growing=growing,
+            relay_running=bool(relay and relay.running),
+            relay_age_s=relay.running_for_s if relay else None,
+            relay_failure=relay.failure if relay else None,
+            recent_restarts=relay.recent_restarts if relay else 0,
+        )
+
+
+def _health_payload(health: CameraHealth, since: datetime) -> dict[str, object]:
+    return {
+        "camera_id": health.camera_id,
+        "state": health.state.value,
+        "detail": health.detail,
+        "recording": health.recording,
+        "since": since.isoformat(),
+    }
+
+
+class GetCameraStatusHistory:
+    def __init__(self, status_log: CameraStatusLog) -> None:
+        self._log = status_log
+
+    async def __call__(self, camera_id: str, limit: int = 50) -> list[tuple[datetime, CameraHealth]]:
+        return await self._log.history(camera_id, max(1, min(limit, 500)))

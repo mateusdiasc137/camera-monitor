@@ -172,6 +172,49 @@
         "title": "CameraOut",
         "type": "object"
       },
+      "CameraStatusOut": {
+        "properties": {
+          "camera_id": {
+            "title": "Camera Id",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "recording": {
+            "title": "Recording",
+            "type": "boolean"
+          },
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "online",
+              "degraded",
+              "starting",
+              "offline",
+              "auth_error",
+              "not_found",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "camera_id",
+          "state",
+          "detail",
+          "recording",
+          "since"
+        ],
+        "title": "CameraStatusOut",
+        "type": "object"
+      },
       "CameraUpdateIn": {
         "description": "Campos omitidos não mudam. Usuário e senha só são trocados se os dois forem enviados.",
         "properties": {
@@ -710,6 +753,31 @@
         ]
       }
     },
+    "/api/v1/cameras/status": {
+      "get": {
+        "operationId": "current_status_api_v1_cameras_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CameraStatusOut"
+                  },
+                  "title": "Response Current Status Api V1 Cameras Status Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Current Status",
+        "tags": [
+          "status"
+        ]
+      }
+    },
     "/api/v1/cameras/{camera_id}": {
       "delete": {
         "operationId": "delete_camera_api_v1_cameras__camera_id__delete",
@@ -835,6 +903,62 @@
         ]
       }
     },
+    "/api/v1/cameras/{camera_id}/status-history": {
+      "get": {
+        "operationId": "status_history_api_v1_cameras__camera_id__status_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "camera_id",
+            "required": true,
+            "schema": {
+              "title": "Camera Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CameraStatusOut"
+                  },
+                  "title": "Response Status History Api V1 Cameras  Camera Id  Status History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Status History",
+        "tags": [
+          "status"
+        ]
+      }
+    },
     "/api/v1/cameras/{camera_id}/test": {
       "post": {
         "operationId": "test_camera_api_v1_cameras__camera_id__test_post",
@@ -878,6 +1002,20 @@
         "summary": "Test Camera",
         "tags": [
           "cameras"
+        ]
+      }
+    },
+    "/api/v1/events/stream": {
+      "get": {
+        "operationId": "event_stream_api_v1_events_stream_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Event Stream",
+        "tags": [
+          "status"
         ]
       }
     },

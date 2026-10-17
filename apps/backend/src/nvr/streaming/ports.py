@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol
 
-from nvr.streaming.domain import PathSpec, PathState, RelaySpec, RelayStatus
+from nvr.streaming.domain import CameraHealth, PathSpec, PathState, RelaySpec, RelayStatus
 
 
 class MediaServer(Protocol):
@@ -31,3 +32,11 @@ class RelaySupervisor(Protocol):
     def names(self) -> set[str]: ...
     def statuses(self) -> dict[str, RelayStatus]: ...
     async def stop_all(self) -> None: ...
+
+
+class CameraStatusLog(Protocol):
+    """Histórico de mudanças de estado das câmeras (só transições, não amostras)."""
+
+    async def record(self, camera_id: str, at: datetime, health: CameraHealth) -> None: ...
+    async def latest(self) -> dict[str, tuple[datetime, CameraHealth]]: ...
+    async def history(self, camera_id: str, limit: int) -> list[tuple[datetime, CameraHealth]]: ...

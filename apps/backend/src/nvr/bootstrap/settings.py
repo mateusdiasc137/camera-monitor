@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     mediamtx_rtsp_address: str = Field(default="127.0.0.1:8554", description="onde os relays publicam")
     ffmpeg_path: str = "ffmpeg"
     media_sync_interval: float = Field(default=15.0, description="segundos entre reconciliações")
+    status_interval: float = Field(default=5.0, description="segundos entre amostras do estado das câmeras")
     recordings_dir: Path | None = Field(
         default=None,
         description="pasta das gravações até a F1-11b (local pela UI); padrão: data_dir/recordings",

@@ -28,9 +28,16 @@ from nvr.identity.adapters.sql_repositories import SqlSessionRepository, SqlUser
 from nvr.identity.application import Authenticate, CreateUser, Login, Logout
 from nvr.persistence.database import create_engine
 from nvr.shared.clock import SystemClock
+from nvr.shared.events import EventBus
 from nvr.streaming.adapters.ffmpeg_relay import FfmpegRelaySupervisor
 from nvr.streaming.adapters.mediamtx_api import MediaMtxApi
-from nvr.streaming.application import AuthorizeMediaAccess, ReconcileMedia
+from nvr.streaming.adapters.sql_status_log import SqlCameraStatusLog
+from nvr.streaming.application import (
+    AuthorizeMediaAccess,
+    GetCameraStatusHistory,
+    MonitorCameraHealth,
+    ReconcileMedia,
+)
 from nvr.system.adapters.database_probe import DatabaseProbe
 from nvr.system.adapters.sql_audit import SqlAuditLog
 from nvr.system.application import GetSystemHealth
@@ -54,6 +61,9 @@ class Container:
     delete_camera: DeleteCamera
     test_camera_connection: TestCameraConnection
     reconcile_media: ReconcileMedia
+    monitor_camera_health: MonitorCameraHealth
+    get_camera_status_history: GetCameraStatusHistory
+    event_bus: EventBus
     authorize_media_access: AuthorizeMediaAccess
     media_api: MediaMtxApi
     relays: FfmpegRelaySupervisor
@@ -93,6 +103,8 @@ def build_container(
     relays = FfmpegRelaySupervisor(
         settings.ffmpeg_path, settings.mediamtx_rtsp_address, AuthorizeMediaAccess.RELAY_USER, relay_secret
     )
+    event_bus = EventBus()
+    status_log = SqlCameraStatusLog(engine)
     return Container(
         settings=settings,
         engine=engine,
@@ -110,6 +122,9 @@ def build_container(
         reconcile_media=ReconcileMedia(
             cameras, secrets, media_api, relays, settings.resolved_recordings_dir().as_posix()
         ),
+        monitor_camera_health=MonitorCameraHealth(cameras, media_api, relays, status_log, event_bus, clock),
+        get_camera_status_history=GetCameraStatusHistory(status_log),
+        event_bus=event_bus,
         authorize_media_access=AuthorizeMediaAccess(relay_secret),
         media_api=media_api,
         relays=relays,

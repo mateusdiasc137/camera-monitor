@@ -18,6 +18,7 @@ export type Camera = components['schemas']['CameraOut']
 export type CameraCreate = components['schemas']['CameraCreateIn']
 export type CameraUpdate = components['schemas']['CameraUpdateIn']
 export type ProbeResult = components['schemas']['ProbeResultOut']
+export type CameraStatus = components['schemas']['CameraStatusOut']
 
 /** Erro de API com o status HTTP, a mensagem amigável e, em validações, os erros por campo. */
 export class ApiError extends Error {

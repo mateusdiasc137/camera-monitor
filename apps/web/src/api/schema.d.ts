@@ -73,6 +73,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cameras/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Current Status */
+        get: operations["current_status_api_v1_cameras_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cameras/{camera_id}": {
         parameters: {
             query?: never;
@@ -92,6 +109,23 @@ export interface paths {
         patch: operations["update_camera_api_v1_cameras__camera_id__patch"];
         trace?: never;
     };
+    "/api/v1/cameras/{camera_id}/status-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status History */
+        get: operations["status_history_api_v1_cameras__camera_id__status_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cameras/{camera_id}/test": {
         parameters: {
             query?: never;
@@ -103,6 +137,23 @@ export interface paths {
         put?: never;
         /** Test Camera */
         post: operations["test_camera_api_v1_cameras__camera_id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Event Stream */
+        get: operations["event_stream_api_v1_events_stream_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -216,6 +267,25 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** CameraStatusOut */
+        CameraStatusOut: {
+            /** Camera Id */
+            camera_id: string;
+            /** Detail */
+            detail: string;
+            /** Recording */
+            recording: boolean;
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "online" | "degraded" | "starting" | "offline" | "auth_error" | "not_found" | "disabled";
         };
         /**
          * CameraUpdateIn
@@ -473,6 +543,26 @@ export interface operations {
             };
         };
     };
+    current_status_api_v1_cameras_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraStatusOut"][];
+                };
+            };
+        };
+    };
     get_camera_api_v1_cameras__camera_id__get: {
         parameters: {
             query?: never;
@@ -568,6 +658,39 @@ export interface operations {
             };
         };
     };
+    status_history_api_v1_cameras__camera_id__status_history_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraStatusOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     test_camera_api_v1_cameras__camera_id__test_post: {
         parameters: {
             query?: never;
@@ -596,6 +719,24 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    event_stream_api_v1_events_stream_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

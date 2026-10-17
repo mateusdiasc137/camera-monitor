@@ -31,7 +31,8 @@
 - [x] F1-05 teste de conexão (DESCRIBE RTSP próprio; validado na X6C-WEQ: H265+PCMA, auth_error com senha errada)
 - [x] F1-06 MediaMTX + relays FFmpeg supervisionados pelo backend + reconciliação (validado com a câmera real)
 - [x] F1-06b liga/desliga gravação por câmera (campo `recording_enabled`, aplicado na reconciliação)
-- [ ] F1-07 estado da câmera (online/offline/auth_error) e SSE (próximo)
+- [x] F1-07 estado da câmera em tempo real (SSE) e histórico; senha recusada reduz tentativas a 1/5 min (validado na X6C-WEQ)
+- [ ] F1-08 ao vivo na interface com autorização de mídia (próximo)
 
 > Convenções: cada tarefa tem ID (`F1-07`), entregáveis, critério de "pronto" verificável e dependências.
 > 🔒 = exige autorização explícita do usuário antes de executar (altera estado da câmera ou age fisicamente).

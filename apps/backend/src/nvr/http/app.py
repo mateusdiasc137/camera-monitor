@@ -18,11 +18,17 @@ from nvr.cameras.application import (
     TestCameraConnection,
     UpdateCamera,
 )
-from nvr.http.routers import auth, cameras, internal, system
+from nvr.http.routers import auth, cameras, internal, status, system
 from nvr.http.security import SameOriginMiddleware, current_user
 from nvr.identity.application import Authenticate, Login, Logout
 from nvr.shared import errors
-from nvr.streaming.application import AuthorizeMediaAccess, ReconcileMedia
+from nvr.shared.events import EventBus
+from nvr.streaming.application import (
+    AuthorizeMediaAccess,
+    GetCameraStatusHistory,
+    MonitorCameraHealth,
+    ReconcileMedia,
+)
 from nvr.system.application import GetSystemHealth
 
 _STATUS = {
@@ -64,6 +70,10 @@ class UseCases(Protocol):
     def reconcile_media(self) -> ReconcileMedia: ...
     @property
     def authorize_media_access(self) -> AuthorizeMediaAccess: ...
+    @property
+    def monitor_camera_health(self) -> MonitorCameraHealth: ...
+    @property
+    def get_camera_status_history(self) -> GetCameraStatusHistory: ...
 
 
 def create_app(
@@ -72,6 +82,7 @@ def create_app(
     cookie_secure: bool = True,
     trusted_proxies: Iterable[str] = ("127.0.0.1", "::1"),
     lifespan: Lifespan[FastAPI] | None = None,
+    event_bus: EventBus | None = None,
 ) -> FastAPI:
     app = FastAPI(
         lifespan=lifespan,
@@ -84,20 +95,23 @@ def create_app(
     app.state.use_cases = use_cases
     app.state.cookie_secure = cookie_secure
     app.state.trusted_proxies = frozenset(trusted_proxies)
+    app.state.event_bus = event_bus or EventBus()
     app.add_middleware(SameOriginMiddleware)
 
     @app.exception_handler(errors.AppError)
     async def app_error_handler(_request: Request, exc: errors.AppError) -> JSONResponse:
-        status = next((code for cls, code in _STATUS.items() if isinstance(exc, cls)), 500)
+        http_status = next((code for cls, code in _STATUS.items() if isinstance(exc, cls)), 500)
         content: dict[str, object] = {"error": exc.code, "message": exc.message}
         if isinstance(exc, errors.ValidationFailed) and exc.fields:
             content["fields"] = exc.fields
-        return JSONResponse(status_code=status, content=content)
+        return JSONResponse(status_code=http_status, content=content)
 
     # Público: só o login. Todo o resto exige sessão (ADR-003).
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(internal.router)  # só loopback; checado no próprio endpoint
     protected = [Depends(current_user)]
     app.include_router(system.router, prefix="/api/v1", dependencies=protected)
+    # status antes de cameras: "/cameras/status" não pode ser capturado por "/cameras/{camera_id}".
+    app.include_router(status.router, prefix="/api/v1", dependencies=protected)
     app.include_router(cameras.router, prefix="/api/v1", dependencies=protected)
     return app

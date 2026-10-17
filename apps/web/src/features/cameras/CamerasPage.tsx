@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import type { Camera, ProbeResult } from '../../api/client'
+import type { Camera, CameraStatus, ProbeResult } from '../../api/client'
 import { CameraForm } from './CameraForm'
+import { CameraStatusBadge, StatusHistory } from './CameraStatusBadge'
 import { useCameras, useDeleteCamera, useTestCamera } from './queries'
+import { useCameraStatuses } from './status'
 
 const OUTCOME_LABEL: Record<ProbeResult['outcome'], string> = {
   online: 'Online',
@@ -30,7 +32,9 @@ function ProbeResults({ results }: { results: ProbeResult[] }) {
   )
 }
 
-function CameraCard({ camera, isAdmin, onEdit }: { camera: Camera; isAdmin: boolean; onEdit: () => void }) {
+type CardProps = { camera: Camera; status: CameraStatus | undefined; isAdmin: boolean; onEdit: () => void }
+
+function CameraCard({ camera, status, isAdmin, onEdit }: CardProps) {
   const test = useTestCamera()
   const remove = useDeleteCamera()
 
@@ -48,6 +52,7 @@ function CameraCard({ camera, isAdmin, onEdit }: { camera: Camera; isAdmin: bool
           {camera.host}:{camera.rtsp_port} · {camera.driver === 'xiongmai' ? 'iCSee/Xiongmai' : 'RTSP genérico'}
         </span>
       </header>
+      <CameraStatusBadge status={status} />
       <div className="badges">
         <span className={`badge ${camera.recording_enabled ? 'badge--on' : ''}`}>
           {camera.recording_enabled ? 'Gravação ligada' : 'Gravação desligada'}
@@ -58,6 +63,7 @@ function CameraCard({ camera, isAdmin, onEdit }: { camera: Camera; isAdmin: bool
       {test.data && <ProbeResults results={test.data} />}
       {test.isError && <p className="error">{test.error.message}</p>}
       {remove.isError && <p className="error">{remove.error.message}</p>}
+      <StatusHistory cameraId={camera.id} />
       {isAdmin && (
         <div className="card-actions">
           <button type="button" onClick={() => test.mutate(camera.id)} disabled={test.isPending}>
@@ -77,6 +83,7 @@ function CameraCard({ camera, isAdmin, onEdit }: { camera: Camera; isAdmin: bool
 
 export function CamerasPage({ isAdmin }: { isAdmin: boolean }) {
   const cameras = useCameras()
+  const statuses = useCameraStatuses()
   const [editing, setEditing] = useState<Camera | 'new' | null>(null)
 
   if (editing !== null) {
@@ -102,7 +109,13 @@ export function CamerasPage({ isAdmin }: { isAdmin: boolean }) {
       )}
       <div className="camera-grid">
         {cameras.data?.map((c) => (
-          <CameraCard key={c.id} camera={c} isAdmin={isAdmin} onEdit={() => setEditing(c)} />
+          <CameraCard
+            key={c.id}
+            camera={c}
+            status={statuses.data?.[c.id]}
+            isAdmin={isAdmin}
+            onEdit={() => setEditing(c)}
+          />
         ))}
       </div>
     </section>

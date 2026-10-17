@@ -29,15 +29,21 @@ def build_app(container: Container) -> FastAPI:
     media_sync = PeriodicTask(
         "reconciliação de mídia", settings.media_sync_interval, container.reconcile_media
     )
+    health_monitor = PeriodicTask(
+        "estado das câmeras", settings.status_interval, container.monitor_camera_health
+    )
+    container.monitor_camera_health.on_media_recovered = media_sync.trigger
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         if settings.media_enabled:
             media_sync.start()
+            health_monitor.start()
             app.state.media_sync = media_sync
         try:
             yield
         finally:
+            await health_monitor.stop()
             await media_sync.stop()
             await container.aclose()
 
@@ -46,6 +52,7 @@ def build_app(container: Container) -> FastAPI:
         cookie_secure=settings.cookie_secure,
         trusted_proxies=settings.trusted_proxies,
         lifespan=lifespan,
+        event_bus=container.event_bus,
     )
 
 
@@ -78,6 +85,9 @@ def main(argv: list[str] | None = None) -> int:
     openapi.add_argument("--output", type=Path, help="arquivo de saída (padrão: stdout)")
     args = parser.parse_args(argv)
 
+    for stream in (sys.stdout, sys.stderr):  # logs em UTF-8 também no Windows (cp1252 corrompe acentos)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)  # a reconciliação consulta o MediaMTX a cada ciclo
     settings = Settings()
