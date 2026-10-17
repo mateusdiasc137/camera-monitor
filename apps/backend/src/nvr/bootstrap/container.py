@@ -27,6 +27,10 @@ from nvr.identity.adapters.memory_throttle import MemoryLoginThrottle
 from nvr.identity.adapters.sql_repositories import SqlSessionRepository, SqlUserRepository
 from nvr.identity.application import Authenticate, CreateUser, Login, Logout
 from nvr.persistence.database import create_engine
+from nvr.recordings.adapters.fs_store import FileSegmentStore
+from nvr.recordings.adapters.sql_repositories import SqlSegmentIndex, SqlStorageLocations
+from nvr.recordings.application import EnsureStorageLocation, IndexSegments, ListRecordings
+from nvr.recordings.domain import RECORD_FILENAME_TEMPLATE
 from nvr.shared.clock import SystemClock
 from nvr.shared.events import EventBus
 from nvr.streaming.adapters.ffmpeg_relay import FfmpegRelaySupervisor
@@ -70,6 +74,10 @@ class Container:
     media_api: MediaMtxApi
     relays: FfmpegRelaySupervisor
     live_viewing: LiveViewing
+    ensure_storage_location: EnsureStorageLocation
+    index_segments: IndexSegments
+    list_recordings: ListRecordings
+    segment_index: SqlSegmentIndex
     whep: MediaMtxWhep
 
     async def aclose(self) -> None:
@@ -111,6 +119,11 @@ def build_container(
         settings.ffmpeg_path, settings.mediamtx_rtsp_address, AuthorizeMediaAccess.RELAY_USER, relay_secret
     )
     event_bus = EventBus()
+    recordings_dir = settings.resolved_recordings_dir()
+    # %z no nome: início sem ambiguidade de fuso/horário de verão (o MediaMTX entende ao reproduzir).
+    record_path = f"{recordings_dir.as_posix()}/%path/{RECORD_FILENAME_TEMPLATE}"
+    locations = SqlStorageLocations(engine, clock)
+    segment_index = SqlSegmentIndex(engine, clock)
     status_log = SqlCameraStatusLog(engine)
     return Container(
         settings=settings,
@@ -126,9 +139,11 @@ def build_container(
         update_camera=UpdateCamera(*camera_deps),
         delete_camera=DeleteCamera(*camera_deps),
         test_camera_connection=TestCameraConnection(*camera_deps, probe=probe or RtspDescribeProbe()),
-        reconcile_media=ReconcileMedia(
-            cameras, secrets, media_api, relays, settings.resolved_recordings_dir().as_posix()
-        ),
+        reconcile_media=ReconcileMedia(cameras, secrets, media_api, relays, record_path),
+        ensure_storage_location=EnsureStorageLocation(locations, recordings_dir),
+        index_segments=IndexSegments(locations, segment_index, FileSegmentStore(), cameras),
+        list_recordings=ListRecordings(cameras, segment_index, status_log, clock),
+        segment_index=segment_index,
         monitor_camera_health=MonitorCameraHealth(cameras, media_api, relays, status_log, event_bus, clock),
         get_camera_status_history=GetCameraStatusHistory(status_log),
         event_bus=event_bus,

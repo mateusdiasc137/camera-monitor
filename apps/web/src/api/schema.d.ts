@@ -198,6 +198,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recordings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Recordings */
+        get: operations["list_recordings_api_v1_recordings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/health": {
         parameters: {
             query?: never;
@@ -384,10 +401,41 @@ export interface components {
              */
             state: "ok" | "degraded" | "down";
         };
+        /** GapOut */
+        GapOut: {
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "paused" | "camera_unavailable" | "disabled" | "unknown";
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** IntervalOut */
+        IntervalOut: {
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
         };
         /** LoginIn */
         LoginIn: {
@@ -414,6 +462,31 @@ export interface components {
             profile: "main" | "sub";
             /** Tracks */
             tracks: components["schemas"]["TrackOut"][];
+        };
+        /** RecordingsOut */
+        RecordingsOut: {
+            /** Camera Id */
+            camera_id: string;
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /** Gaps */
+            gaps: components["schemas"]["GapOut"][];
+            /** Intervals */
+            intervals: components["schemas"]["IntervalOut"][];
+            /** Recorded S */
+            recorded_s: number;
+            /** Recording Now */
+            recording_now: boolean;
+            /** Segments */
+            segments: number;
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
         };
         /** SystemHealthOut */
         SystemHealthOut: {
@@ -885,6 +958,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_recordings_api_v1_recordings_get: {
+        parameters: {
+            query: {
+                camera_id: string;
+                /** @description padrão: 24 h antes do fim */
+                start?: string | null;
+                /** @description padrão: agora */
+                end?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

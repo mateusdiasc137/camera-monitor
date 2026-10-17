@@ -421,6 +421,37 @@
         "title": "ComponentHealthOut",
         "type": "object"
       },
+      "GapOut": {
+        "properties": {
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "paused",
+              "camera_unavailable",
+              "disabled",
+              "unknown"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "reason"
+        ],
+        "title": "GapOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -432,6 +463,26 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "IntervalOut": {
+        "properties": {
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "IntervalOut",
         "type": "object"
       },
       "LoginIn": {
@@ -508,6 +559,62 @@
           "latency_ms"
         ],
         "title": "ProbeResultOut",
+        "type": "object"
+      },
+      "RecordingsOut": {
+        "properties": {
+          "camera_id": {
+            "title": "Camera Id",
+            "type": "string"
+          },
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/GapOut"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "intervals": {
+            "items": {
+              "$ref": "#/components/schemas/IntervalOut"
+            },
+            "title": "Intervals",
+            "type": "array"
+          },
+          "recorded_s": {
+            "title": "Recorded S",
+            "type": "number"
+          },
+          "recording_now": {
+            "title": "Recording Now",
+            "type": "boolean"
+          },
+          "segments": {
+            "title": "Segments",
+            "type": "integer"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "camera_id",
+          "start",
+          "end",
+          "intervals",
+          "gaps",
+          "segments",
+          "recorded_s",
+          "recording_now"
+        ],
+        "title": "RecordingsOut",
         "type": "object"
       },
       "SystemHealthOut": {
@@ -1216,6 +1323,86 @@
         "summary": "Event Stream",
         "tags": [
           "status"
+        ]
+      }
+    },
+    "/api/v1/recordings": {
+      "get": {
+        "operationId": "list_recordings_api_v1_recordings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "camera_id",
+            "required": true,
+            "schema": {
+              "title": "Camera Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "padrão: 24 h antes do fim",
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "padrão: 24 h antes do fim",
+              "title": "Start"
+            }
+          },
+          {
+            "description": "padrão: agora",
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "padrão: agora",
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Recordings",
+        "tags": [
+          "recordings"
         ]
       }
     },

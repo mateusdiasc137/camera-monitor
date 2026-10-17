@@ -33,7 +33,8 @@
 - [x] F1-06b liga/desliga gravação por câmera (campo `recording_enabled`, aplicado na reconciliação)
 - [x] F1-07 estado da câmera em tempo real (SSE) e histórico; senha recusada reduz tentativas a 1/5 min (validado na X6C-WEQ)
 - [x] F1-08 ao vivo na interface: WebRTC negociado pelo backend (ADR-003 revisto), grade + ampliado, recorte das duas lentes, som
-- [ ] F1-09 índice de segmentos gravados (próximo)
+- [x] F1-09 índice de gravações (varredura + leitura própria do fMP4), consulta `/api/v1/recordings` com buracos e motivos; resumo de 24 h na UI
+- [ ] F1-10 linha do tempo, reprodução e download (próximo)
 
 > Convenções: cada tarefa tem ID (`F1-07`), entregáveis, critério de "pronto" verificável e dependências.
 > 🔒 = exige autorização explícita do usuário antes de executar (altera estado da câmera ou age fisicamente).

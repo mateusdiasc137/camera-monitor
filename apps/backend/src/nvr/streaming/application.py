@@ -60,10 +60,11 @@ class ReconcileMedia:
         secrets: SecretStore,
         media: MediaServer,
         relays: RelaySupervisor,
-        record_root: str,
+        record_path: str,
     ) -> None:
+        """`record_path`: recordPath completo do MediaMTX (local de gravação + padrão de nome)."""
         self._cameras, self._secrets, self._media, self._relays = cameras, secrets, media, relays
-        self._record_template = f"{record_root.rstrip('/')}/%path/%Y-%m-%d_%H-%M-%S-%f"
+        self._record_template = record_path
         self._lock = asyncio.Lock()
 
     def _profiles(self, camera: Camera) -> list[StreamProfile]:

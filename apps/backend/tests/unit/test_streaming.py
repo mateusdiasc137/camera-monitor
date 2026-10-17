@@ -95,7 +95,7 @@ def setup(
     )
     for c in cameras:
         secrets.put(c.secret_ref, CameraCredentials("admin", "pw$&'1"))
-    return ReconcileMedia(repo, secrets, media, relays, RECORD_ROOT), media, relays, repo  # type: ignore[arg-type]
+    return ReconcileMedia(repo, secrets, media, relays, RECORD_TEMPLATE), media, relays, repo  # type: ignore[arg-type]
 
 
 def test_path_names_round_trip() -> None:

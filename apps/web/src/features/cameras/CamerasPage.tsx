@@ -3,6 +3,7 @@ import type { Camera, CameraStatus, ProbeResult } from '../../api/client'
 import { CameraForm } from './CameraForm'
 import { CameraStatusBadge, StatusHistory } from './CameraStatusBadge'
 import { useCameras, useDeleteCamera, useTestCamera } from './queries'
+import { RecordingSummary } from '../recordings/RecordingSummary'
 import { useCameraStatuses } from './status'
 
 const OUTCOME_LABEL: Record<ProbeResult['outcome'], string> = {
@@ -63,6 +64,7 @@ function CameraCard({ camera, status, isAdmin, onEdit }: CardProps) {
       {test.data && <ProbeResults results={test.data} />}
       {test.isError && <p className="error">{test.error.message}</p>}
       {remove.isError && <p className="error">{remove.error.message}</p>}
+      <RecordingSummary cameraId={camera.id} />
       <StatusHistory cameraId={camera.id} />
       {isAdmin && (
         <div className="card-actions">

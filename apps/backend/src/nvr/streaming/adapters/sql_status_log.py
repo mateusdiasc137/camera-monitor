@@ -37,6 +37,17 @@ class SqlCameraStatusLog:
             rows = (await conn.execute(query)).mappings().all()
         return {row["camera_id"]: _row(row) for row in rows}
 
+    async def between(
+        self, camera_id: str, start: datetime, end: datetime
+    ) -> list[tuple[datetime, CameraHealth]]:
+        mine = events.c.camera_id == camera_id
+        before = select(events).where(mine, events.c.at <= start).order_by(events.c.id.desc()).limit(1)
+        inside = select(events).where(mine, events.c.at > start, events.c.at <= end).order_by(events.c.id)
+        async with self._engine.connect() as conn:
+            first = (await conn.execute(before)).mappings().all()
+            rest = (await conn.execute(inside)).mappings().all()
+        return [_row(row) for row in [*first, *rest]]
+
     async def history(self, camera_id: str, limit: int) -> list[tuple[datetime, CameraHealth]]:
         query = (
             select(events).where(events.c.camera_id == camera_id).order_by(events.c.id.desc()).limit(limit)
