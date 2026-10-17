@@ -6,6 +6,7 @@ from typing import Protocol
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from starlette.types import Lifespan
 
 from nvr import __version__
 from nvr.http.routers import system
@@ -31,8 +32,9 @@ class UseCases(Protocol):
     def get_system_health(self) -> GetSystemHealth: ...
 
 
-def create_app(use_cases: UseCases) -> FastAPI:
+def create_app(use_cases: UseCases, lifespan: Lifespan[FastAPI] | None = None) -> FastAPI:
     app = FastAPI(
+        lifespan=lifespan,
         title="NVR local",
         version=__version__,
         openapi_url="/api/v1/openapi.json",

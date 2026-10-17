@@ -7,6 +7,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "aiosqlite>=0.22.1",
     "alembic>=1.20.0",
     "argon2-cffi>=25.1.0",
     "cryptography>=50.0.2",
@@ -16,7 +17,7 @@ dependencies = [
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.0",
     "pyjwt>=2.15.1",
-    "sqlalchemy>=2.1.5",
+    "sqlalchemy[asyncio]>=2.1.5",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -101,4 +102,10 @@ forbidden_modules = ["nvr.http", "nvr.jobs", "nvr.bootstrap"]
 name = "Entradas HTTP não usam adaptadores diretamente (só via casos de uso)"
 type = "forbidden"
 source_modules = ["nvr.http"]
-forbidden_modules = ["nvr.*.adapters"]
+forbidden_modules = ["nvr.*.adapters", "nvr.persistence", "sqlalchemy"]
+
+[[tool.importlinter.contracts]]
+name = "Persistência (SQLAlchemy/Alembic) só é usada por adaptadores e pelo bootstrap"
+type = "forbidden"
+source_modules = ["nvr.*.domain", "nvr.*.application", "nvr.*.ports", "nvr.shared"]
+forbidden_modules = ["nvr.persistence"]

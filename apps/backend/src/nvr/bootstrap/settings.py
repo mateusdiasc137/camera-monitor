@@ -18,7 +18,3 @@ class Settings(BaseSettings):
         default_factory=lambda: [Path("./data/recordings")],
         description="raízes nas quais a UI pode escolher o local de gravação",
     )
-
-    @property
-    def database_url(self) -> str:
-        return f"sqlite+aiosqlite:///{(self.data_dir / 'nvr.db').as_posix()}"
