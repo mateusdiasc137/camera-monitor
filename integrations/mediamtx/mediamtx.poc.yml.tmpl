@@ -45,6 +45,12 @@ authInternalUsers:
     permissions:
       - action: read
       - action: playback
+  # Relay FFmpeg local (opção --relay): publica a câmera com timestamps do relógio do servidor.
+  - user: relay
+    pass: ${RELAY_PASS_HASH}
+    ips: ["127.0.0.1", "::1"]
+    permissions:
+      - action: publish
   - user: any
     pass:
     ips: ["127.0.0.1", "::1"]

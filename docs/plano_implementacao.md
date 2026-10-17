@@ -15,6 +15,15 @@
 - **Armazenamento pela UI:** habilitar/desabilitar gravação, escolher o local de gravação, definir a cota de espaço e a política de substituição, com padrão **sobrescrever as gravações mais antigas** (ver D4 e D7).
 - **CI:** GitHub Actions com Ubuntu (obrigatório) + Windows.
 
+## Estado (17/10/2026)
+
+**Fase 0 concluída**, com pendências menores listadas em `docs/compatibility/X6C-WEQ.md` §9. Resultados que alteram este plano:
+- **Relay FFmpeg por stream** entre a câmera e o MediaMTX (ADR-002): a leitura direta causava resets do gravador a cada ~2 min. F1-06 inclui o relay.
+- **H.265 + G.711 funcionam ao vivo no Chrome** (celular e PC) sem transcodificação; o HLS fica sem áudio.
+- **Eventos de pessoa vêm do DVRIP** (`appEventHumanDetectAlarm`); o ONVIF não tem tópico de pessoa.
+- **Câmera de duas lentes empilhadas** no mesmo stream (fixa + PTZ): a UI deve permitir ver as metades separadamente.
+- Próximo passo: **Fase 1, a partir da F1-01**.
+
 > Convenções: cada tarefa tem ID (`F1-07`), entregáveis, critério de "pronto" verificável e dependências.
 > 🔒 = exige autorização explícita do usuário antes de executar (altera estado da câmera ou age fisicamente).
 > 📷 = exige a câmera real (teste de hardware opt-in, marcado `manual_camera`).
@@ -52,7 +61,8 @@ Navegador ──HTTPS──> Caddy (único ponto exposto na LAN)
                        ├── /media/hls/*        → MediaMTX HLS (127.0.0.1:8888)
                        ├── /media/playback/*   → MediaMTX playback (127.0.0.1:9996)
                        └── /*                  → arquivos estáticos do frontend
-MediaMTX ──RTSP──> câmera     (API de controle em 127.0.0.1:9997, nunca exposta)
+câmera ──RTSP──> relay FFmpeg (-c copy) ──publish localhost──> MediaMTX   (ADR-002)
+MediaMTX: API de controle em 127.0.0.1:9997, nunca exposta
 MediaMTX ──UDP 8189──> navegador (mídia WebRTC; única porta extra liberada na LAN)
 ```
 - Endereço na LAN: `https://nvr-camera-monitor.local` (reserva: `https://<IP fixo do servidor>`; opcional: `.home.arpa`).
@@ -178,7 +188,7 @@ apps/backend/src/nvr/
 | F1-03 | Identity | CLI `nvr create-admin`; login com argon2id; cookie de sessão `HttpOnly; Secure; SameSite=Strict`; verificação de `Origin` nas mutações; rate limit no login; logout | unit: hash/verify, lockout; API: rotas sem sessão → 401 |
 | F1-04 | Cadastro de câmeras (RF-01) | entidade + validações (host, porta 1–65535, path RTSP, perfis main/sub); segredo salvo no `SecretStore` e referenciado por `secret_ref`; `GET/POST/PATCH /api/v1/cameras`, desabilitar | contrato: resposta **nunca** contém senha/URL completa; teste que procura a senha de teste em todas as respostas e logs |
 | F1-05 | Teste de conexão (RF-02) | `POST /cameras/{id}/test`: sonda TCP → RTSP DESCRIBE (401?) → ffprobe opcional para codecs | integração contra a câmera fake: ok, senha errada → `auth_error`, porta fechada → `offline` |
-| F1-06 | Adaptador MediaMTX + reconciliador | `ensure_path` com `source`, `rtspTransport: tcp`, `record` conforme `recording_enabled`, `recordPath` do local ativo, `sourceOnDemand: no`; job de reconciliação; leitura de `/v3/paths/list` | integração: sobe MediaMTX de `tools/` num diretório temporário, cadastra câmera fake, path fica `ready`, gravação aparece no disco |
+| F1-06 | Adaptador MediaMTX + relay + reconciliador | relay FFmpeg por stream (ADR-002; validar supervisão via `runOnInit`/`runOnInitRestart`), `ensure_path` com `source`, `rtspTransport: tcp`, `record` conforme `recording_enabled`, `recordPath` do local ativo, `sourceOnDemand: no`; job de reconciliação; leitura de `/v3/paths/list` | integração: sobe MediaMTX de `tools/` num diretório temporário, cadastra câmera fake, path fica `ready`, gravação aparece no disco |
 | F1-06b | Liga/desliga gravação | `PUT /api/v1/cameras/{id}/recording` `{enabled}` (admin); estado `gravando / pausada / parada por erro` no status e no SSE; registro no `audit_log` | integração: desligar → nenhum segmento novo e o ao vivo continua; religar → segmentos voltam; gap marcado como "pausa do usuário" (diferente de "falha") |
 | F1-07 | Estado da câmera (RF-07) | `derive_status()` puro + job de polling; histórico de transições; SSE `GET /api/v1/events/stream` com mudanças de status | unit: tabela de sinais → estado; integração: matar a câmera fake → `offline` → religar → `online` e gravação retomada |
 | F1-08 | Auth de mídia | `/internal/mediamtx/auth` (só loopback), tokens curtos, `GET /cameras/{id}/live` → descritor `{webrtc: url, hls: url, expiresAt}` | integração: WHEP sem token → 401; token de outra câmera → 401; token expirado → 401 |
