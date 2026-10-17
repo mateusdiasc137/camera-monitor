@@ -89,7 +89,10 @@ def main() -> int:
 
     sources, cam_password = (FAKE_SOURCES, "") if args.source == "fake" else real_sources()
     viewer_pass = secrets.token_urlsafe(12)
-    record_dir = (POC_DIR / "recordings").as_posix()
+    # Pasta separada por fonte, para nunca misturar gravações sintéticas com as da câmera real.
+    record_dir = (POC_DIR / "recordings" / args.source).as_posix()
+    (POC_DIR / "active_source").parent.mkdir(parents=True, exist_ok=True)
+    (POC_DIR / "active_source").write_text(args.source, encoding="utf-8")
     config = POC_DIR / "mediamtx.yml"
     render_template(TEMPLATE, config, {
         "VIEWER_USER": "viewer",

@@ -99,7 +99,8 @@ def main() -> int:
     record("HLS com credencial reproduzível", info is not None, summary(info) if info else "ffprobe falhou")
 
     # 4. Gravação em disco
-    cam_dir = POC_DIR / "recordings" / "cam"
+    source = (POC_DIR / "active_source").read_text(encoding="utf-8").strip()
+    cam_dir = POC_DIR / "recordings" / source / "cam"
     deadline = time.monotonic() + args.wait_segment
     segments: list[Path] = []
     while time.monotonic() < deadline:
@@ -119,9 +120,13 @@ def main() -> int:
     entries = json.loads(body) if status == 200 else []
     record("playback /list", status == 200 and len(entries) > 0, f"HTTP {status}, {len(entries)} intervalo(s)")
     if entries:
-        start = datetime.fromisoformat(entries[0]["start"])
+        start = datetime.fromisoformat(entries[-1]["start"])  # o intervalo mais recente
         query = urllib.parse.urlencode({"path": "cam", "start": (start + timedelta(seconds=2)).isoformat(),
                                         "duration": "10", "format": "mp4"})
+        if entries[-1]["duration"] < 13:
+            record("playback /get (10 s, mp4)", False, "intervalo mais recente ainda curto; rode de novo em instantes")
+            entries = []
+    if entries:
         status, data = http_get(f"http://{host}:9996/get?{query}", auth, timeout=30)
         ok = status == 200 and len(data) > 0
         detail = f"HTTP {status}, {len(data)} bytes"
