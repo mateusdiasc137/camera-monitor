@@ -1,0 +1,13 @@
+title = "camera-monitor"
+
+[extend]
+useDefault = true
+
+# Exceções por VALOR (não por pasta): só senhas sintéticas usadas em testes e fixtures.
+# Um segredo real colado em um teste continua sendo detectado.
+[allowlist]
+description = "Credenciais sintéticas de teste"
+regexes = [
+  '''^senha-forte-123$''',
+  '''^senha-de-teste-123$''',
+]
