@@ -1,0 +1,104 @@
+[project]
+name = "nvr"
+version = "0.1.0"
+description = "NVR local multiplataforma: backend (FastAPI, portas e adaptadores)"
+authors = [
+    { name = "Mateus Dias", email = "mateusdiasc137@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.0",
+    "argon2-cffi>=25.1.0",
+    "cryptography>=50.0.2",
+    "fastapi>=0.143.3",
+    "httpx>=0.28.1",
+    "keyring>=25.7.0",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.16.0",
+    "pyjwt>=2.15.1",
+    "sqlalchemy>=2.1.5",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+nvr = "nvr.bootstrap.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "import-linter>=2.15",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.17.1",
+]
+
+# ---------------------------------------------------------------- ferramentas
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "ASYNC", "PT"]
+ignore = ["RUF001", "RUF002", "RUF003"]  # textos em português com acentos
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.mypy]
+python_version = "3.12"
+packages = ["nvr"]
+mypy_path = "src"
+strict = true
+warn_unreachable = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "integration: usa processos externos (MediaMTX/FFmpeg) e rede local",
+    "manual_camera: exige a câmera real e credenciais no .env (nunca roda na CI)",
+]
+addopts = "-m 'not manual_camera'"
+
+# ------------------------------------------- regras de dependência (ADR-001)
+
+[tool.importlinter]
+root_package = "nvr"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Domínio é puro: sem frameworks, infraestrutura nem camadas externas"
+type = "forbidden"
+source_modules = ["nvr.*.domain"]
+forbidden_modules = [
+    "nvr.*.application", "nvr.*.adapters", "nvr.http", "nvr.jobs", "nvr.bootstrap",
+    "fastapi", "starlette", "sqlalchemy", "httpx", "pydantic", "keyring", "argon2", "jwt",
+]
+
+[[tool.importlinter.contracts]]
+name = "Aplicação depende só de domínio, portas e shared"
+type = "forbidden"
+source_modules = ["nvr.*.application"]
+forbidden_modules = [
+    "nvr.*.adapters", "nvr.http", "nvr.jobs", "nvr.bootstrap",
+    "fastapi", "starlette", "sqlalchemy", "httpx", "keyring", "argon2", "jwt",
+]
+
+[[tool.importlinter.contracts]]
+name = "Adaptadores não conhecem as entradas (HTTP, jobs) nem o composition root"
+type = "forbidden"
+source_modules = ["nvr.*.adapters"]
+forbidden_modules = ["nvr.http", "nvr.jobs", "nvr.bootstrap"]
+
+[[tool.importlinter.contracts]]
+name = "Entradas HTTP não usam adaptadores diretamente (só via casos de uso)"
+type = "forbidden"
+source_modules = ["nvr.http"]
+forbidden_modules = ["nvr.*.adapters"]

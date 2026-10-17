@@ -1,0 +1,93 @@
+{
+  "components": {
+    "schemas": {
+      "ComponentHealthOut": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "degraded",
+              "down"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "state",
+          "detail"
+        ],
+        "title": "ComponentHealthOut",
+        "type": "object"
+      },
+      "SystemHealthOut": {
+        "properties": {
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ComponentHealthOut"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "degraded",
+              "down"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "state",
+          "components"
+        ],
+        "title": "SystemHealthOut",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "NVR local",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/system/health": {
+      "get": {
+        "operationId": "get_health_api_v1_system_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemHealthOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Health",
+        "tags": [
+          "system"
+        ]
+      }
+    }
+  }
+}

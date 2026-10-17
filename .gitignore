@@ -13,7 +13,6 @@ data/
 *.sqlite
 *.mp4
 *.m4s
-*.ts
 *.mkv
 *.jpg
 *.jpeg
