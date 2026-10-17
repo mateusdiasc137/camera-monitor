@@ -149,3 +149,163 @@ button.secondary {
   color: var(--down);
   margin: 0;
 }
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 8px 12px;
+}
+
+.tab--active {
+  color: var(--text);
+  border-bottom-color: #2457c5;
+  font-weight: 600;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.camera-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 12px;
+}
+
+.camera-card header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.camera-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.badge {
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.badge--on {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.card-actions,
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.form-actions {
+  justify-content: flex-end;
+}
+
+button.danger {
+  color: var(--down);
+}
+
+.probe-results {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+}
+
+.probe-results li::before {
+  margin-right: 6px;
+}
+
+.probe-results li.ok::before {
+  content: '✓';
+  color: var(--ok);
+}
+
+.probe-results li.bad::before {
+  content: '✗';
+  color: var(--down);
+}
+
+.form {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.form-row .grow {
+  flex: 1 1 200px;
+}
+
+.form-row .narrow {
+  flex: 0 1 120px;
+}
+
+.form-hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+}
+
+label.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}
+
+.field-error {
+  color: var(--down);
+  font-weight: 400;
+  font-size: 0.9rem;
+}
+
+code {
+  font-size: 0.85em;
+}

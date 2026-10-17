@@ -9,7 +9,7 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "oxlint",
     "test": "vitest run",
-    "gen:api": "uv --project ../backend run nvr openapi --output src/api/openapi.json && npx -y openapi-typescript@7.13.0 src/api/openapi.json -o src/api/schema.d.ts",
+    "gen:api": "uv --project ../backend run nvr openapi --output src/api/openapi.json && npx -y openapi-typescript@7.13.0 src/api/openapi.json -o src/api/schema.d.ts --default-non-nullable false",
     "preview": "vite preview"
   },
   "dependencies": {

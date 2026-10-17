@@ -27,7 +27,9 @@
 - [x] F1-01 esqueleto backend/UI + CI Ubuntu/Windows (contratos de arquitetura, cliente tipado, gitleaks)
 - [x] F1-02 persistência SQLite + Alembic (migrações 0001–0002)
 - [x] F1-03 autenticação do painel (backend + UI de login)
-- [ ] F1-04 cadastro de câmeras (próximo)
+- [x] F1-04 cadastro de câmeras (senha no cofre do SO; caminho com {user}/{password})
+- [x] F1-05 teste de conexão (DESCRIBE RTSP próprio; validado na X6C-WEQ: H265+PCMA, auth_error com senha errada)
+- [ ] F1-06 adaptador MediaMTX + relay + reconciliador (próximo)
 
 > Convenções: cada tarefa tem ID (`F1-07`), entregáveis, critério de "pronto" verificável e dependências.
 > 🔒 = exige autorização explícita do usuário antes de executar (altera estado da câmera ou age fisicamente).

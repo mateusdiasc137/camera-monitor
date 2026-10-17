@@ -14,21 +14,32 @@ export const api = createClient<paths>({
 
 export type SystemHealth = components['schemas']['SystemHealthOut']
 export type CurrentUser = components['schemas']['UserOut']
+export type Camera = components['schemas']['CameraOut']
+export type CameraCreate = components['schemas']['CameraCreateIn']
+export type CameraUpdate = components['schemas']['CameraUpdateIn']
+export type ProbeResult = components['schemas']['ProbeResultOut']
 
-/** Erro de API com o status HTTP e a mensagem amigável enviada pelo backend. */
+/** Erro de API com o status HTTP, a mensagem amigável e, em validações, os erros por campo. */
 export class ApiError extends Error {
   readonly status: number
+  readonly fields: Record<string, string>
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, fields: Record<string, string> = {}) {
     super(message)
     this.status = status
+    this.fields = fields
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
 export function apiError(response: Response, body: unknown, fallback: string): ApiError {
-  const message =
-    typeof body === 'object' && body !== null && 'message' in body && typeof body.message === 'string'
-      ? body.message
-      : fallback
-  return new ApiError(response.status, message)
+  const message = isRecord(body) && typeof body.message === 'string' ? body.message : fallback
+  const fields =
+    isRecord(body) && isRecord(body.fields)
+      ? Object.fromEntries(Object.entries(body.fields).filter((e): e is [string, string] => typeof e[1] === 'string'))
+      : {}
+  return new ApiError(response.status, message, fields)
 }

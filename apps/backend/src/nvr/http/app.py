@@ -10,7 +10,15 @@ from fastapi.responses import JSONResponse
 from starlette.types import Lifespan
 
 from nvr import __version__
-from nvr.http.routers import auth, system
+from nvr.cameras.application import (
+    DeleteCamera,
+    GetCamera,
+    ListCameras,
+    RegisterCamera,
+    TestCameraConnection,
+    UpdateCamera,
+)
+from nvr.http.routers import auth, cameras, system
 from nvr.http.security import SameOriginMiddleware, current_user
 from nvr.identity.application import Authenticate, Login, Logout
 from nvr.shared import errors
@@ -39,6 +47,18 @@ class UseCases(Protocol):
     def logout(self) -> Logout: ...
     @property
     def authenticate(self) -> Authenticate: ...
+    @property
+    def list_cameras(self) -> ListCameras: ...
+    @property
+    def get_camera(self) -> GetCamera: ...
+    @property
+    def register_camera(self) -> RegisterCamera: ...
+    @property
+    def update_camera(self) -> UpdateCamera: ...
+    @property
+    def delete_camera(self) -> DeleteCamera: ...
+    @property
+    def test_camera_connection(self) -> TestCameraConnection: ...
 
 
 def create_app(
@@ -64,9 +84,14 @@ def create_app(
     @app.exception_handler(errors.AppError)
     async def app_error_handler(_request: Request, exc: errors.AppError) -> JSONResponse:
         status = next((code for cls, code in _STATUS.items() if isinstance(exc, cls)), 500)
-        return JSONResponse(status_code=status, content={"error": exc.code, "message": exc.message})
+        content: dict[str, object] = {"error": exc.code, "message": exc.message}
+        if isinstance(exc, errors.ValidationFailed) and exc.fields:
+            content["fields"] = exc.fields
+        return JSONResponse(status_code=status, content=content)
 
     # Público: só o login. Todo o resto exige sessão (ADR-003).
     app.include_router(auth.router, prefix="/api/v1")
-    app.include_router(system.router, prefix="/api/v1", dependencies=[Depends(current_user)])
+    protected = [Depends(current_user)]
+    app.include_router(system.router, prefix="/api/v1", dependencies=protected)
+    app.include_router(cameras.router, prefix="/api/v1", dependencies=protected)
     return app

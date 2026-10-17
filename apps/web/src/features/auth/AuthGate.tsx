@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
+import type { CurrentUser } from '../../api/client'
 import { LoginForm } from './LoginForm'
 import { useLogout, useSession } from './session'
 
 /** Mostra o login enquanto não houver sessão; depois, a aplicação com o usuário no topo. */
-export function AuthGate({ children }: { children: ReactNode }) {
+export function AuthGate({ children }: { children: (user: CurrentUser) => ReactNode }) {
   const session = useSession()
   const logout = useLogout()
 
@@ -33,7 +34,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           </div>
         )}
       </header>
-      <main className="content">{user ? children : <LoginForm />}</main>
+      <main className="content">{user ? children(user) : <LoginForm />}</main>
     </>
   )
 }

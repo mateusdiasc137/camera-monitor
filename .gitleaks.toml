@@ -10,4 +10,9 @@ description = "Credenciais sintéticas de teste"
 regexes = [
   '''^senha-forte-123$''',
   '''^senha-de-teste-123$''',
+  '''^Segredo-Da-Camera-42$''',
+  '''^senha-da-camera-XYZ$''',
+  '''^s3nh(@|%40)&?forte$''',
+  '''^nova-senha-1$''',
+  '''^outra-senha$''',
 ]

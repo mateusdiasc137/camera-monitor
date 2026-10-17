@@ -22,7 +22,13 @@ class NotFound(AppError):
 
 
 class ValidationFailed(AppError):
+    """`fields` mapeia campo → mensagem, para a UI marcar cada campo inválido."""
+
     code = "validation_failed"
+
+    def __init__(self, message: str, fields: dict[str, str] | None = None) -> None:
+        super().__init__(message)
+        self.fields = fields or {}
 
 
 class Conflict(AppError):

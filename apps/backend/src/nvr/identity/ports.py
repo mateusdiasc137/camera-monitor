@@ -4,6 +4,9 @@ from datetime import datetime
 from typing import Protocol
 
 from nvr.identity.domain import Session, User
+from nvr.shared.clock import Clock
+
+__all__ = ["Clock", "LoginThrottle", "PasswordHasher", "SessionRepository", "UserRepository"]
 
 
 class UserRepository(Protocol):
@@ -37,7 +40,3 @@ class LoginThrottle(Protocol):
     def is_blocked(self, key: str, now: datetime) -> bool: ...
     def register_failure(self, key: str, now: datetime) -> None: ...
     def reset(self, key: str) -> None: ...
-
-
-class Clock(Protocol):
-    def now(self) -> datetime: ...

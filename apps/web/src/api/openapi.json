@@ -1,6 +1,322 @@
 {
   "components": {
     "schemas": {
+      "CameraCreateIn": {
+        "properties": {
+          "driver": {
+            "default": "generic_rtsp",
+            "enum": [
+              "generic_rtsp",
+              "xiongmai"
+            ],
+            "title": "Driver",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "host": {
+            "maxLength": 255,
+            "title": "Host",
+            "type": "string"
+          },
+          "ingest": {
+            "default": "relay",
+            "enum": [
+              "relay",
+              "direct"
+            ],
+            "title": "Ingest",
+            "type": "string"
+          },
+          "main_path": {
+            "maxLength": 512,
+            "title": "Main Path",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "title": "Name",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "recording_enabled": {
+            "default": true,
+            "title": "Recording Enabled",
+            "type": "boolean"
+          },
+          "rtsp_port": {
+            "default": 554,
+            "title": "Rtsp Port",
+            "type": "integer"
+          },
+          "sub_path": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Path"
+          },
+          "username": {
+            "maxLength": 128,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "host",
+          "main_path",
+          "username",
+          "password"
+        ],
+        "title": "CameraCreateIn",
+        "type": "object"
+      },
+      "CameraOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "driver": {
+            "enum": [
+              "generic_rtsp",
+              "xiongmai"
+            ],
+            "title": "Driver",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "ingest": {
+            "enum": [
+              "relay",
+              "direct"
+            ],
+            "title": "Ingest",
+            "type": "string"
+          },
+          "main_path": {
+            "description": "caminho RTSP; credenciais aparecem só como {user}/{password}",
+            "title": "Main Path",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "recording_enabled": {
+            "title": "Recording Enabled",
+            "type": "boolean"
+          },
+          "rtsp_port": {
+            "title": "Rtsp Port",
+            "type": "integer"
+          },
+          "sub_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Path"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "driver",
+          "host",
+          "rtsp_port",
+          "main_path",
+          "sub_path",
+          "ingest",
+          "enabled",
+          "recording_enabled",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CameraOut",
+        "type": "object"
+      },
+      "CameraUpdateIn": {
+        "description": "Campos omitidos não mudam. Usuário e senha só são trocados se os dois forem enviados.",
+        "properties": {
+          "driver": {
+            "anyOf": [
+              {
+                "enum": [
+                  "generic_rtsp",
+                  "xiongmai"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Driver"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host"
+          },
+          "ingest": {
+            "anyOf": [
+              {
+                "enum": [
+                  "relay",
+                  "direct"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingest"
+          },
+          "main_path": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Path"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "password",
+            "title": "Password",
+            "writeOnly": true
+          },
+          "recording_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recording Enabled"
+          },
+          "rtsp_port": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rtsp Port"
+          },
+          "sub_path": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "string vazia remove o substream",
+            "title": "Sub Path"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "title": "CameraUpdateIn",
+        "type": "object"
+      },
       "ComponentHealthOut": {
         "properties": {
           "detail": {
@@ -64,6 +380,60 @@
         "title": "LoginIn",
         "type": "object"
       },
+      "ProbeResultOut": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "outcome": {
+            "enum": [
+              "online",
+              "auth_error",
+              "not_found",
+              "offline",
+              "protocol_error"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "profile": {
+            "enum": [
+              "main",
+              "sub"
+            ],
+            "title": "Profile",
+            "type": "string"
+          },
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/TrackOut"
+            },
+            "title": "Tracks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "profile",
+          "outcome",
+          "detail",
+          "tracks",
+          "latency_ms"
+        ],
+        "title": "ProbeResultOut",
+        "type": "object"
+      },
       "SystemHealthOut": {
         "properties": {
           "components": {
@@ -93,6 +463,36 @@
           "components"
         ],
         "title": "SystemHealthOut",
+        "type": "object"
+      },
+      "TrackOut": {
+        "properties": {
+          "clock_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clock Rate"
+          },
+          "codec": {
+            "title": "Codec",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "codec",
+          "clock_rate"
+        ],
+        "title": "TrackOut",
         "type": "object"
       },
       "UserOut": {
@@ -243,6 +643,241 @@
         "summary": "Me",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/cameras": {
+      "get": {
+        "operationId": "list_cameras_api_v1_cameras_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CameraOut"
+                  },
+                  "title": "Response List Cameras Api V1 Cameras Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Cameras",
+        "tags": [
+          "cameras"
+        ]
+      },
+      "post": {
+        "operationId": "create_camera_api_v1_cameras_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CameraCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Camera",
+        "tags": [
+          "cameras"
+        ]
+      }
+    },
+    "/api/v1/cameras/{camera_id}": {
+      "delete": {
+        "operationId": "delete_camera_api_v1_cameras__camera_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "camera_id",
+            "required": true,
+            "schema": {
+              "title": "Camera Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Camera",
+        "tags": [
+          "cameras"
+        ]
+      },
+      "get": {
+        "operationId": "get_camera_api_v1_cameras__camera_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "camera_id",
+            "required": true,
+            "schema": {
+              "title": "Camera Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Camera",
+        "tags": [
+          "cameras"
+        ]
+      },
+      "patch": {
+        "operationId": "update_camera_api_v1_cameras__camera_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "camera_id",
+            "required": true,
+            "schema": {
+              "title": "Camera Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CameraUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Camera",
+        "tags": [
+          "cameras"
+        ]
+      }
+    },
+    "/api/v1/cameras/{camera_id}/test": {
+      "post": {
+        "operationId": "test_camera_api_v1_cameras__camera_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "camera_id",
+            "required": true,
+            "schema": {
+              "title": "Camera Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProbeResultOut"
+                  },
+                  "title": "Response Test Camera Api V1 Cameras  Camera Id  Test Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Camera",
+        "tags": [
+          "cameras"
         ]
       }
     },

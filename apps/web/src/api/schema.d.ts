@@ -55,6 +55,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cameras": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Cameras */
+        get: operations["list_cameras_api_v1_cameras_get"];
+        put?: never;
+        /** Create Camera */
+        post: operations["create_camera_api_v1_cameras_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cameras/{camera_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Camera */
+        get: operations["get_camera_api_v1_cameras__camera_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Camera */
+        delete: operations["delete_camera_api_v1_cameras__camera_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Camera */
+        patch: operations["update_camera_api_v1_cameras__camera_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/cameras/{camera_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test Camera */
+        post: operations["test_camera_api_v1_cameras__camera_id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/health": {
         parameters: {
             query?: never;
@@ -76,6 +130,127 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** CameraCreateIn */
+        CameraCreateIn: {
+            /**
+             * Driver
+             * @default generic_rtsp
+             * @enum {string}
+             */
+            driver?: "generic_rtsp" | "xiongmai";
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled?: boolean;
+            /** Host */
+            host: string;
+            /**
+             * Ingest
+             * @default relay
+             * @enum {string}
+             */
+            ingest?: "relay" | "direct";
+            /** Main Path */
+            main_path: string;
+            /** Name */
+            name: string;
+            /**
+             * Password
+             * Format: password
+             */
+            password: string;
+            /**
+             * Recording Enabled
+             * @default true
+             */
+            recording_enabled?: boolean;
+            /**
+             * Rtsp Port
+             * @default 554
+             */
+            rtsp_port?: number;
+            /** Sub Path */
+            sub_path?: string | null;
+            /** Username */
+            username: string;
+        };
+        /** CameraOut */
+        CameraOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Driver
+             * @enum {string}
+             */
+            driver: "generic_rtsp" | "xiongmai";
+            /** Enabled */
+            enabled: boolean;
+            /** Host */
+            host: string;
+            /** Id */
+            id: string;
+            /**
+             * Ingest
+             * @enum {string}
+             */
+            ingest: "relay" | "direct";
+            /**
+             * Main Path
+             * @description caminho RTSP; credenciais aparecem só como {user}/{password}
+             */
+            main_path: string;
+            /** Name */
+            name: string;
+            /** Recording Enabled */
+            recording_enabled: boolean;
+            /** Rtsp Port */
+            rtsp_port: number;
+            /** Sub Path */
+            sub_path: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * CameraUpdateIn
+         * @description Campos omitidos não mudam. Usuário e senha só são trocados se os dois forem enviados.
+         */
+        CameraUpdateIn: {
+            /** Driver */
+            driver?: ("generic_rtsp" | "xiongmai") | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Host */
+            host?: string | null;
+            /** Ingest */
+            ingest?: ("relay" | "direct") | null;
+            /** Main Path */
+            main_path?: string | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * Password
+             * Format: password
+             */
+            password?: string | null;
+            /** Recording Enabled */
+            recording_enabled?: boolean | null;
+            /** Rtsp Port */
+            rtsp_port?: number | null;
+            /**
+             * Sub Path
+             * @description string vazia remove o substream
+             */
+            sub_path?: string | null;
+            /** Username */
+            username?: string | null;
+        };
         /** ComponentHealthOut */
         ComponentHealthOut: {
             /** Detail */
@@ -100,6 +275,25 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** ProbeResultOut */
+        ProbeResultOut: {
+            /** Detail */
+            detail: string;
+            /** Latency Ms */
+            latency_ms: number | null;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "online" | "auth_error" | "not_found" | "offline" | "protocol_error";
+            /**
+             * Profile
+             * @enum {string}
+             */
+            profile: "main" | "sub";
+            /** Tracks */
+            tracks: components["schemas"]["TrackOut"][];
+        };
         /** SystemHealthOut */
         SystemHealthOut: {
             /** Components */
@@ -111,6 +305,15 @@ export interface components {
             state: "ok" | "degraded" | "down";
             /** Version */
             version: string;
+        };
+        /** TrackOut */
+        TrackOut: {
+            /** Clock Rate */
+            clock_rate: number | null;
+            /** Codec */
+            codec: string;
+            /** Kind */
+            kind: string;
         };
         /** UserOut */
         UserOut: {
@@ -213,6 +416,185 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+        };
+    };
+    list_cameras_api_v1_cameras_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraOut"][];
+                };
+            };
+        };
+    };
+    create_camera_api_v1_cameras_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CameraCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_camera_api_v1_cameras__camera_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_camera_api_v1_cameras__camera_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_camera_api_v1_cameras__camera_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CameraUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_camera_api_v1_cameras__camera_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProbeResultOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

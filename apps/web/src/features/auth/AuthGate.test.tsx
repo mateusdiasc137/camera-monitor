@@ -1,32 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fakeServer } from '../../test/fakeServer'
 import { AuthGate } from './AuthGate'
-
-type Route = (request: Request) => Response | Promise<Response>
-
-/** Servidor falso: responde por "MÉTODO caminho" e registra as requisições. */
-function fakeServer(routes: Record<string, Route>) {
-  const calls: Request[] = []
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (request: Request) => {
-      calls.push(request)
-      const key = `${request.method} ${new URL(request.url).pathname}`
-      const route = routes[key]
-      return route ? route(request) : new Response('não encontrado', { status: 404 })
-    }),
-  )
-  return calls
-}
 
 function renderGate() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <AuthGate>
-        <p>conteúdo protegido</p>
-      </AuthGate>
+      <AuthGate>{() => <p>conteúdo protegido</p>}</AuthGate>
     </QueryClientProvider>,
   )
 }
