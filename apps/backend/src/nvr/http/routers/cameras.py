@@ -9,13 +9,21 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from nvr.cameras.application import CameraChanges, CameraDraft
-from nvr.cameras.domain import Camera, CameraCredentials, CameraDriver, IngestMode, ProbeResult
+from nvr.cameras.domain import (
+    Camera,
+    CameraCredentials,
+    CameraDriver,
+    IngestMode,
+    LensLayout,
+    ProbeResult,
+)
 from nvr.http.security import AdminUser, require_admin
 
 router = APIRouter(prefix="/cameras", tags=["cameras"])
 
 Driver = Literal["generic_rtsp", "xiongmai"]
 Ingest = Literal["relay", "direct"]
+Lens = Literal["single", "stacked2"]
 
 
 def _sync_media(request: Request) -> None:
@@ -36,6 +44,7 @@ class CameraOut(BaseModel):
     ingest: Ingest
     enabled: bool
     recording_enabled: bool
+    lens_layout: Lens
     created_at: datetime
     updated_at: datetime
 
@@ -52,6 +61,7 @@ class CameraOut(BaseModel):
             ingest=c.ingest.value,
             enabled=c.enabled,
             recording_enabled=c.recording_enabled,
+            lens_layout=c.lens_layout.value,
             created_at=c.created_at,
             updated_at=c.updated_at,
         )
@@ -69,6 +79,7 @@ class CameraCreateIn(BaseModel):
     ingest: Ingest = "relay"
     enabled: bool = True
     recording_enabled: bool = True
+    lens_layout: Lens = "single"
 
 
 class CameraUpdateIn(BaseModel):
@@ -87,6 +98,7 @@ class CameraUpdateIn(BaseModel):
     ingest: Ingest | None = None
     enabled: bool | None = None
     recording_enabled: bool | None = None
+    lens_layout: Lens | None = None
 
 
 class TrackOut(BaseModel):
@@ -136,6 +148,7 @@ async def create_camera(body: CameraCreateIn, request: Request, admin: AdminUser
         ingest=IngestMode(body.ingest),
         enabled=body.enabled,
         recording_enabled=body.recording_enabled,
+        lens_layout=LensLayout(body.lens_layout),
     )
     camera = await request.app.state.use_cases.register_camera(draft, admin.username)
     _sync_media(request)
@@ -159,6 +172,7 @@ async def update_camera(
         ingest=IngestMode(body.ingest) if body.ingest else None,
         enabled=body.enabled,
         recording_enabled=body.recording_enabled,
+        lens_layout=LensLayout(body.lens_layout) if body.lens_layout else None,
         credentials=credentials,
     )
     camera = await request.app.state.use_cases.update_camera(camera_id, changes, admin.username)

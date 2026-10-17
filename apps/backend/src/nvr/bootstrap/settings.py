@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     media_enabled: bool = Field(default=True, description="liga a reconciliação com o MediaMTX e os relays")
     mediamtx_api_url: str = "http://127.0.0.1:9997"
     mediamtx_rtsp_address: str = Field(default="127.0.0.1:8554", description="onde os relays publicam")
+    mediamtx_webrtc_url: str = Field(
+        default="http://127.0.0.1:8889", description="servidor WebRTC (WHEP) do MediaMTX, só no loopback"
+    )
     ffmpeg_path: str = "ffmpeg"
     media_sync_interval: float = Field(default=15.0, description="segundos entre reconciliações")
     status_interval: float = Field(default=5.0, description="segundos entre amostras do estado das câmeras")

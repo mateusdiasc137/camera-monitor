@@ -31,6 +31,15 @@
             "title": "Ingest",
             "type": "string"
           },
+          "lens_layout": {
+            "default": "single",
+            "enum": [
+              "single",
+              "stacked2"
+            ],
+            "title": "Lens Layout",
+            "type": "string"
+          },
           "main_path": {
             "maxLength": 512,
             "title": "Main Path",
@@ -121,6 +130,14 @@
             "title": "Ingest",
             "type": "string"
           },
+          "lens_layout": {
+            "enum": [
+              "single",
+              "stacked2"
+            ],
+            "title": "Lens Layout",
+            "type": "string"
+          },
           "main_path": {
             "description": "caminho RTSP; credenciais aparecem só como {user}/{password}",
             "title": "Main Path",
@@ -166,6 +183,7 @@
           "ingest",
           "enabled",
           "recording_enabled",
+          "lens_layout",
           "created_at",
           "updated_at"
         ],
@@ -270,6 +288,21 @@
               }
             ],
             "title": "Ingest"
+          },
+          "lens_layout": {
+            "anyOf": [
+              {
+                "enum": [
+                  "single",
+                  "stacked2"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lens Layout"
           },
           "main_path": {
             "anyOf": [
@@ -1002,6 +1035,173 @@
         "summary": "Test Camera",
         "tags": [
           "cameras"
+        ]
+      }
+    },
+    "/api/v1/cameras/{camera_id}/whep": {
+      "post": {
+        "description": "Recebe a oferta SDP (application/sdp) e devolve a resposta; `Location` aponta para a sessão.",
+        "operationId": "start_live_api_v1_cameras__camera_id__whep_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "camera_id",
+            "required": true,
+            "schema": {
+              "title": "Camera Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "profile",
+            "required": false,
+            "schema": {
+              "default": "main",
+              "enum": [
+                "main",
+                "sub"
+              ],
+              "title": "Profile",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/sdp": {}
+            },
+            "description": "SDP de resposta (WHEP)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Live",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/cameras/{camera_id}/whep/{session_id}": {
+      "delete": {
+        "operationId": "stop_live_api_v1_cameras__camera_id__whep__session_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "camera_id",
+            "required": true,
+            "schema": {
+              "title": "Camera Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "profile",
+            "required": false,
+            "schema": {
+              "default": "main",
+              "enum": [
+                "main",
+                "sub"
+              ],
+              "title": "Profile",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stop Live",
+        "tags": [
+          "live"
+        ]
+      },
+      "patch": {
+        "operationId": "add_candidates_api_v1_cameras__camera_id__whep__session_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "camera_id",
+            "required": true,
+            "schema": {
+              "title": "Camera Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "profile",
+            "required": false,
+            "schema": {
+              "default": "main",
+              "enum": [
+                "main",
+                "sub"
+              ],
+              "title": "Profile",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Candidates",
+        "tags": [
+          "live"
         ]
       }
     },

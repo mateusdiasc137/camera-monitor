@@ -7,7 +7,8 @@
 
 logLevel: info
 
-# --- Autenticação: o backend decide (publish só do relay local; leitura com token, a partir da F1-08)
+# --- Autenticação: o backend decide (publish só do relay local; leitura só pelo próprio backend,
+# que intermedia o WebRTC do navegador com a sessão do painel — ADR-003)
 authMethod: http
 authHTTPAddress: http://127.0.0.1:8000/internal/mediamtx/auth
 authHTTPExclude:
@@ -27,17 +28,17 @@ rtmp: false
 srt: false
 moq: false
 
-# --- Ao vivo e playback: atrás do proxy HTTPS em produção (F1-18). Em desenvolvimento, ficam na LAN
-# para testes no celular, mas exigem autorização do backend (que nega leitura até a F1-08).
+# --- WebRTC: a sinalização (HTTP) só no loopback — o navegador negocia pelo backend (/api/v1/cameras/{id}/whep).
+# A mídia (UDP 8189) precisa ser alcançável pela LAN: o MediaMTX anuncia os IPs das interfaces.
 webrtc: true
-webrtcAddress: :8889
+webrtcAddress: 127.0.0.1:8889
 webrtcLocalUDPAddress: :8189
 webrtcAllowOrigins: []
 hls: true
-hlsAddress: :8888
+hlsAddress: 127.0.0.1:8888
 hlsAllowOrigins: []
 playback: true
-playbackAddress: :9996
+playbackAddress: 127.0.0.1:9996
 playbackAllowOrigins: []
 
 metrics: false

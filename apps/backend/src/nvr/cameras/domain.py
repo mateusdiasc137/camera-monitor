@@ -28,6 +28,13 @@ class StreamProfile(StrEnum):
     SUB = "sub"
 
 
+class LensLayout(StrEnum):
+    """Como a imagem chega no stream. Câmeras de duas lentes (ex.: X6C-WEQ) empilham as imagens."""
+
+    SINGLE = "single"
+    STACKED2 = "stacked2"  # duas imagens, uma acima da outra
+
+
 @dataclass(frozen=True)
 class CameraCredentials:
     username: str
@@ -54,6 +61,7 @@ class Camera:
     recording_enabled: bool
     created_at: datetime
     updated_at: datetime
+    lens_layout: LensLayout = LensLayout.SINGLE
 
     def path_for(self, profile: StreamProfile) -> str | None:
         return self.main_path if profile is StreamProfile.MAIN else self.sub_path

@@ -32,7 +32,8 @@
 - [x] F1-06 MediaMTX + relays FFmpeg supervisionados pelo backend + reconciliação (validado com a câmera real)
 - [x] F1-06b liga/desliga gravação por câmera (campo `recording_enabled`, aplicado na reconciliação)
 - [x] F1-07 estado da câmera em tempo real (SSE) e histórico; senha recusada reduz tentativas a 1/5 min (validado na X6C-WEQ)
-- [ ] F1-08 ao vivo na interface com autorização de mídia (próximo)
+- [x] F1-08 ao vivo na interface: WebRTC negociado pelo backend (ADR-003 revisto), grade + ampliado, recorte das duas lentes, som
+- [ ] F1-09 índice de segmentos gravados (próximo)
 
 > Convenções: cada tarefa tem ID (`F1-07`), entregáveis, critério de "pronto" verificável e dependências.
 > 🔒 = exige autorização explícita do usuário antes de executar (altera estado da câmera ou age fisicamente).

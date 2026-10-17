@@ -155,3 +155,14 @@ def derive_health(
     if main.relay_failure is RelayFailure.PUBLISH:
         return CameraHealth(camera_id, CameraState.OFFLINE, "o servidor de mídia recusou o stream", False)
     return CameraHealth(camera_id, CameraState.OFFLINE, "sem conexão com a câmera", False)
+
+
+# ------------------------------------------------------------------- ao vivo
+
+
+@dataclass(frozen=True)
+class LiveAnswer:
+    """Resposta da negociação WebRTC (WHEP). `session_id` identifica a sessão para PATCH/DELETE."""
+
+    sdp: str
+    session_id: str

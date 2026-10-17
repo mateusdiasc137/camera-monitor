@@ -2,9 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 import { AuthGate } from './features/auth/AuthGate'
 import { CamerasPage } from './features/cameras/CamerasPage'
+import { LivePage } from './features/live/LivePage'
 import { SystemStatus } from './features/system/SystemStatus'
 
 const TABS = [
+  { id: 'live', label: 'Ao vivo' },
   { id: 'cameras', label: 'Câmeras' },
   { id: 'system', label: 'Sistema' },
 ] as const
@@ -13,7 +15,7 @@ type TabId = (typeof TABS)[number]['id']
 
 export default function App() {
   const [queryClient] = useState(() => new QueryClient())
-  const [tab, setTab] = useState<TabId>('cameras')
+  const [tab, setTab] = useState<TabId>('live')
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -33,6 +35,7 @@ export default function App() {
                 </button>
               ))}
             </nav>
+            {tab === 'live' && <LivePage />}
             {tab === 'cameras' && <CamerasPage isAdmin={user.role === 'admin'} />}
             {tab === 'system' && <SystemStatus />}
           </>

@@ -91,6 +91,7 @@ cameras = Table(
     Column("ingest", String(16), nullable=False),  # relay | direct (ADR-002)
     Column("enabled", Boolean, nullable=False),
     Column("recording_enabled", Boolean, nullable=False),
+    Column("lens_layout", String(16), nullable=False, server_default="single"),
     Column("created_at", UTCDateTime, nullable=False),
     Column("updated_at", UTCDateTime, nullable=False),
     CheckConstraint("ingest in ('relay', 'direct')", name="ingest"),

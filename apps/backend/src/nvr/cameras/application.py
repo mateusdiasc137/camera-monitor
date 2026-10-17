@@ -9,6 +9,7 @@ from nvr.cameras.domain import (
     CameraCredentials,
     CameraDriver,
     IngestMode,
+    LensLayout,
     ProbeResult,
     StreamProfile,
     rtsp_url,
@@ -43,6 +44,7 @@ class CameraDraft:
     ingest: IngestMode = IngestMode.RELAY
     enabled: bool = True
     recording_enabled: bool = True
+    lens_layout: LensLayout = LensLayout.SINGLE
 
 
 @dataclass(frozen=True)
@@ -58,6 +60,7 @@ class CameraChanges:
     ingest: IngestMode | None = None
     enabled: bool | None = None
     recording_enabled: bool | None = None
+    lens_layout: LensLayout | None = None
     credentials: CameraCredentials | None = None
 
 
@@ -119,6 +122,7 @@ class RegisterCamera(_CameraUseCase):
             ingest=draft.ingest,
             enabled=draft.enabled,
             recording_enabled=draft.recording_enabled,
+            lens_layout=draft.lens_layout,
             created_at=now,
             updated_at=now,
         )
@@ -152,6 +156,7 @@ class UpdateCamera(_CameraUseCase):
             recording_enabled=(
                 current.recording_enabled if changes.recording_enabled is None else changes.recording_enabled
             ),
+            lens_layout=changes.lens_layout or current.lens_layout,
             updated_at=self._clock.now(),
         )
         _validate(camera, changes.credentials)
@@ -169,6 +174,7 @@ class UpdateCamera(_CameraUseCase):
             "ingest",
             "enabled",
             "recording_enabled",
+            "lens_layout",
         )
         changed = [f for f in compared if getattr(camera, f) != getattr(current, f)]
         changed += ["credentials"] if changes.credentials else []

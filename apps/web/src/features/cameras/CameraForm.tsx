@@ -17,6 +17,7 @@ type FormState = {
   password: string
   driver: 'generic_rtsp' | 'xiongmai'
   recording_enabled: boolean
+  lens_layout: 'single' | 'stacked2'
 }
 
 function initialState(camera?: Camera): FormState {
@@ -30,6 +31,7 @@ function initialState(camera?: Camera): FormState {
     password: '',
     driver: camera?.driver ?? 'generic_rtsp',
     recording_enabled: camera?.recording_enabled ?? true,
+    lens_layout: camera?.lens_layout ?? 'single',
   }
 }
 
@@ -59,6 +61,7 @@ export function CameraForm({ camera, onDone }: Props) {
       sub_path: form.sub_path,
       driver: form.driver,
       recording_enabled: form.recording_enabled,
+      lens_layout: form.lens_layout,
     }
     if (editing) {
       // Credenciais só são trocadas se as duas forem preenchidas.
@@ -167,6 +170,15 @@ export function CameraForm({ camera, onDone }: Props) {
           onChange={(e) => set('recording_enabled', e.target.checked)}
         />
         Gravar continuamente
+      </label>
+
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          checked={form.lens_layout === 'stacked2'}
+          onChange={(e) => set('lens_layout', e.target.checked ? 'stacked2' : 'single')}
+        />
+        Duas lentes na mesma imagem (uma acima da outra)
       </label>
 
       {mutation.isError && Object.keys(fieldErrors).length === 0 && (

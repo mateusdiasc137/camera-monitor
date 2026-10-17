@@ -143,6 +143,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cameras/{camera_id}/whep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Live
+         * @description Recebe a oferta SDP (application/sdp) e devolve a resposta; `Location` aponta para a sessão.
+         */
+        post: operations["start_live_api_v1_cameras__camera_id__whep_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cameras/{camera_id}/whep/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Stop Live */
+        delete: operations["stop_live_api_v1_cameras__camera_id__whep__session_id__delete"];
+        options?: never;
+        head?: never;
+        /** Add Candidates */
+        patch: operations["add_candidates_api_v1_cameras__camera_id__whep__session_id__patch"];
+        trace?: never;
+    };
     "/api/v1/events/stream": {
         parameters: {
             query?: never;
@@ -202,6 +240,12 @@ export interface components {
              * @enum {string}
              */
             ingest?: "relay" | "direct";
+            /**
+             * Lens Layout
+             * @default single
+             * @enum {string}
+             */
+            lens_layout?: "single" | "stacked2";
             /** Main Path */
             main_path: string;
             /** Name */
@@ -249,6 +293,11 @@ export interface components {
              * @enum {string}
              */
             ingest: "relay" | "direct";
+            /**
+             * Lens Layout
+             * @enum {string}
+             */
+            lens_layout: "single" | "stacked2";
             /**
              * Main Path
              * @description caminho RTSP; credenciais aparecem só como {user}/{password}
@@ -300,6 +349,8 @@ export interface components {
             host?: string | null;
             /** Ingest */
             ingest?: ("relay" | "direct") | null;
+            /** Lens Layout */
+            lens_layout?: ("single" | "stacked2") | null;
             /** Main Path */
             main_path?: string | null;
             /** Name */
@@ -710,6 +761,103 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProbeResultOut"][];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_live_api_v1_cameras__camera_id__whep_post: {
+        parameters: {
+            query?: {
+                profile?: "main" | "sub";
+            };
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SDP de resposta (WHEP) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/sdp": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_live_api_v1_cameras__camera_id__whep__session_id__delete: {
+        parameters: {
+            query?: {
+                profile?: "main" | "sub";
+            };
+            header?: never;
+            path: {
+                camera_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_candidates_api_v1_cameras__camera_id__whep__session_id__patch: {
+        parameters: {
+            query?: {
+                profile?: "main" | "sub";
+            };
+            header?: never;
+            path: {
+                camera_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

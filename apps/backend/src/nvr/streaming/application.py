@@ -4,6 +4,7 @@ import asyncio
 import hmac
 import ipaddress
 import logging
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -11,11 +12,12 @@ from datetime import datetime
 from nvr.cameras.domain import Camera, StreamProfile, rtsp_url
 from nvr.cameras.ports import CameraRepository, SecretStore
 from nvr.shared.clock import Clock
-from nvr.shared.errors import AppError
+from nvr.shared.errors import AppError, Conflict, NotFound, ValidationFailed
 from nvr.shared.events import Event, EventPublisher
 from nvr.streaming.domain import (
     CameraHealth,
     CameraState,
+    LiveAnswer,
     PathSpec,
     PathState,
     ProfileSignals,
@@ -25,7 +27,7 @@ from nvr.streaming.domain import (
     parse_path_name,
     path_name,
 )
-from nvr.streaming.ports import CameraStatusLog, MediaServer, RelaySupervisor
+from nvr.streaming.ports import CameraStatusLog, LiveSignaling, MediaServer, RelaySupervisor
 
 log = logging.getLogger(__name__)
 
@@ -135,29 +137,71 @@ def _is_loopback(ip: str) -> bool:
 
 
 class AuthorizeMediaAccess:
-    """Decide quem pode publicar/assistir no MediaMTX.
+    """Decide quem pode publicar/assistir no MediaMTX. O navegador nunca fala direto com o MediaMTX:
+    o backend autentica a sessão do painel e repassa a negociação com a credencial `reader` (ADR-003).
 
     - publish: só o relay local (loopback + usuário `relay` + segredo da inicialização), em paths gerenciados.
+    - read/playback: só o próprio backend (loopback + usuário `reader` + segredo da inicialização).
     - api/metrics: só loopback (a API de controle nem escuta fora do loopback).
-    - read/playback: negado até a F1-08 (tokens de sessão do player).
     """
 
     RELAY_USER = "relay"
+    READER_USER = "reader"
 
-    def __init__(self, relay_secret: str) -> None:
-        self._relay_secret = relay_secret
+    def __init__(self, relay_secret: str, reader_secret: str) -> None:
+        self._secrets = {self.RELAY_USER: relay_secret, self.READER_USER: reader_secret}
+
+    def _is(self, req: MediaAccessRequest, user: str) -> bool:
+        return (
+            _is_loopback(req.ip)
+            and req.user == user
+            and hmac.compare_digest(req.password.encode(), self._secrets[user].encode())
+            and parse_path_name(req.path) is not None
+        )
 
     def __call__(self, req: MediaAccessRequest) -> bool:
         if req.action == "publish":
-            return (
-                _is_loopback(req.ip)
-                and req.user == self.RELAY_USER
-                and hmac.compare_digest(req.password.encode(), self._relay_secret.encode())
-                and parse_path_name(req.path) is not None
-            )
+            return self._is(req, self.RELAY_USER)
+        if req.action in ("read", "playback"):
+            return self._is(req, self.READER_USER)
         if req.action in ("api", "metrics"):
             return _is_loopback(req.ip)
         return False
+
+
+class LiveViewing:
+    """Sessões ao vivo (WebRTC). A autorização do usuário é a sessão do painel, checada na camada HTTP."""
+
+    def __init__(self, cameras: CameraRepository, signaling: LiveSignaling) -> None:
+        self._cameras, self._signaling = cameras, signaling
+
+    async def _path(self, camera_id: str, profile: StreamProfile) -> str:
+        camera = await self._cameras.get(camera_id)
+        if camera is None:
+            raise NotFound("câmera não encontrada")
+        if not camera.enabled:
+            raise Conflict("a câmera está desativada")
+        if camera.path_for(profile) is None:
+            raise ValidationFailed("esta câmera não tem substream", {"profile": "perfil indisponível"})
+        return path_name(camera.id, profile)
+
+    async def start(self, camera_id: str, profile: StreamProfile, offer_sdp: str) -> LiveAnswer:
+        return await self._signaling.offer(await self._path(camera_id, profile), offer_sdp)
+
+    async def add_candidates(
+        self, camera_id: str, profile: StreamProfile, session_id: str, fragment: str
+    ) -> None:
+        await self._signaling.patch(await self._path(camera_id, profile), _session(session_id), fragment)
+
+    async def stop(self, camera_id: str, profile: StreamProfile, session_id: str) -> None:
+        await self._signaling.close(await self._path(camera_id, profile), _session(session_id))
+
+
+def _session(session_id: str) -> str:
+    try:
+        return str(uuid.UUID(session_id))
+    except ValueError as exc:
+        raise NotFound("sessão ao vivo não encontrada") from exc
 
 
 @dataclass(frozen=True)

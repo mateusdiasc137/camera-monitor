@@ -18,7 +18,7 @@ from nvr.cameras.application import (
     TestCameraConnection,
     UpdateCamera,
 )
-from nvr.http.routers import auth, cameras, internal, status, system
+from nvr.http.routers import auth, cameras, internal, live, status, system
 from nvr.http.security import SameOriginMiddleware, current_user
 from nvr.identity.application import Authenticate, Login, Logout
 from nvr.shared import errors
@@ -26,6 +26,7 @@ from nvr.shared.events import EventBus
 from nvr.streaming.application import (
     AuthorizeMediaAccess,
     GetCameraStatusHistory,
+    LiveViewing,
     MonitorCameraHealth,
     ReconcileMedia,
 )
@@ -74,6 +75,8 @@ class UseCases(Protocol):
     def monitor_camera_health(self) -> MonitorCameraHealth: ...
     @property
     def get_camera_status_history(self) -> GetCameraStatusHistory: ...
+    @property
+    def live_viewing(self) -> LiveViewing: ...
 
 
 def create_app(
@@ -113,5 +116,6 @@ def create_app(
     app.include_router(system.router, prefix="/api/v1", dependencies=protected)
     # status antes de cameras: "/cameras/status" não pode ser capturado por "/cameras/{camera_id}".
     app.include_router(status.router, prefix="/api/v1", dependencies=protected)
+    app.include_router(live.router, prefix="/api/v1", dependencies=protected)
     app.include_router(cameras.router, prefix="/api/v1", dependencies=protected)
     return app

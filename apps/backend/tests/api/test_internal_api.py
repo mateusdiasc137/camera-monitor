@@ -14,7 +14,7 @@ class FakeUseCases:
 
 
 def client(peer: str) -> TestClient:
-    app = create_app(FakeUseCases(AuthorizeMediaAccess("segredo")))  # type: ignore[arg-type]
+    app = create_app(FakeUseCases(AuthorizeMediaAccess("segredo", "leitura")))  # type: ignore[arg-type]
     return TestClient(app, client=(peer, 50000))
 
 

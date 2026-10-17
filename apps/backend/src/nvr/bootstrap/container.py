@@ -31,10 +31,12 @@ from nvr.shared.clock import SystemClock
 from nvr.shared.events import EventBus
 from nvr.streaming.adapters.ffmpeg_relay import FfmpegRelaySupervisor
 from nvr.streaming.adapters.mediamtx_api import MediaMtxApi
+from nvr.streaming.adapters.mediamtx_whep import MediaMtxWhep
 from nvr.streaming.adapters.sql_status_log import SqlCameraStatusLog
 from nvr.streaming.application import (
     AuthorizeMediaAccess,
     GetCameraStatusHistory,
+    LiveViewing,
     MonitorCameraHealth,
     ReconcileMedia,
 )
@@ -67,10 +69,13 @@ class Container:
     authorize_media_access: AuthorizeMediaAccess
     media_api: MediaMtxApi
     relays: FfmpegRelaySupervisor
+    live_viewing: LiveViewing
+    whep: MediaMtxWhep
 
     async def aclose(self) -> None:
         await self.relays.stop_all()
         await self.media_api.aclose()
+        await self.whep.aclose()
         await self.engine.dispose()
 
 
@@ -99,6 +104,8 @@ def build_container(
     # Segredo do publicador local, novo a cada inicialização (ADR-002/003):
     # só os relays deste processo conseguem publicar no MediaMTX.
     relay_secret = secrets_module.token_urlsafe(24)
+    reader_secret = secrets_module.token_urlsafe(24)  # o backend lendo do MediaMTX em nome do navegador
+    whep = MediaMtxWhep(settings.mediamtx_webrtc_url, AuthorizeMediaAccess.READER_USER, reader_secret)
     media_api = MediaMtxApi(settings.mediamtx_api_url)
     relays = FfmpegRelaySupervisor(
         settings.ffmpeg_path, settings.mediamtx_rtsp_address, AuthorizeMediaAccess.RELAY_USER, relay_secret
@@ -125,7 +132,9 @@ def build_container(
         monitor_camera_health=MonitorCameraHealth(cameras, media_api, relays, status_log, event_bus, clock),
         get_camera_status_history=GetCameraStatusHistory(status_log),
         event_bus=event_bus,
-        authorize_media_access=AuthorizeMediaAccess(relay_secret),
+        authorize_media_access=AuthorizeMediaAccess(relay_secret, reader_secret),
+        live_viewing=LiveViewing(cameras, whep),
+        whep=whep,
         media_api=media_api,
         relays=relays,
     )

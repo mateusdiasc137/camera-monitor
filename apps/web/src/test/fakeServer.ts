@@ -12,7 +12,8 @@ export function fakeServer(routes: Record<string, Route>) {
   })
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (request: Request) => {
+    vi.fn(async (input: Request | string | URL, init?: RequestInit) => {
+      const request = input instanceof Request ? input : new Request(new URL(String(input), location.origin), init)
       calls.push(request.clone())
       const pathname = new URL(request.url).pathname
       const match = compiled.find((r) => r.method === request.method && r.pattern.test(pathname))

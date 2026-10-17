@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Protocol
 
-from nvr.streaming.domain import CameraHealth, PathSpec, PathState, RelaySpec, RelayStatus
+from nvr.streaming.domain import CameraHealth, LiveAnswer, PathSpec, PathState, RelaySpec, RelayStatus
 
 
 class MediaServer(Protocol):
@@ -40,3 +40,11 @@ class CameraStatusLog(Protocol):
     async def record(self, camera_id: str, at: datetime, health: CameraHealth) -> None: ...
     async def latest(self) -> dict[str, tuple[datetime, CameraHealth]]: ...
     async def history(self, camera_id: str, limit: int) -> list[tuple[datetime, CameraHealth]]: ...
+
+
+class LiveSignaling(Protocol):
+    """Negociação WebRTC (WHEP) com o servidor de mídia, feita pelo backend em nome do navegador."""
+
+    async def offer(self, path: str, sdp: str) -> LiveAnswer: ...
+    async def patch(self, path: str, session_id: str, fragment: str) -> None: ...
+    async def close(self, path: str, session_id: str) -> None: ...

@@ -7,7 +7,7 @@ NVR (Network Video Recorder) self-hosted para câmeras IP na rede local: ao vivo
 - Decisões (ADRs): [docs/decisions/](docs/decisions/)
 - Compatibilidade de câmeras e PoCs: [docs/compatibility/](docs/compatibility/)
 
-**Estado:** Fase 1 (MVP) em andamento: login, cadastro de câmeras com teste de conexão, e gravação contínua via MediaMTX + relays FFmpeg comandados pelo backend. Ao vivo na interface e playback ainda não (F1-08 e F1-10).
+**Estado:** Fase 1 (MVP) em andamento: login, cadastro de câmeras com teste de conexão, estado em tempo real, ao vivo na interface (WebRTC) e gravação contínua via MediaMTX + relays FFmpeg comandados pelo backend. Playback de gravações ainda não (F1-10).
 
 ## Desenvolvimento
 
@@ -29,6 +29,8 @@ npm run dev                                        # http://localhost:5173
 ```
 
 No PowerShell, defina a variável com `$env:NVR_COOKIE_SECURE="false"` antes de `uv run nvr serve`, e use `npm.cmd` se a política de execução bloquear `npm`.
+
+Para abrir a interface no celular (mesma rede): `npm run dev -- --host` e acesse `http://<IP-do-PC>:5173`. O vídeo ao vivo usa a porta **UDP 8189** do MediaMTX: no Windows, permita o `mediamtx.exe` no firewall para redes privadas.
 
 Com o MediaMTX rodando, o backend cria sozinho um path por câmera cadastrada (`cam-<id>-main`/`-sub`), sobe um relay FFmpeg para cada um e grava o perfil principal em `apps/backend/data/recordings/` (enquanto a escolha do local pela UI não chega, na F1-11b).
 

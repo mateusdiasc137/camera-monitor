@@ -183,7 +183,14 @@ MAIN = path_name(CAM_ID, StreamProfile.MAIN)
             MediaAccessRequest("publish", "outro", "127.0.0.1", "relay", "segredo"),
             False,
         ),  # path não gerenciado
-        (MediaAccessRequest("read", MAIN, "127.0.0.1", "relay", "segredo"), False),  # até a F1-08
+        # Leitura: só o backend (usuário reader, segredo próprio, loopback). O relay não lê.
+        (MediaAccessRequest("read", MAIN, "127.0.0.1", "reader", "leitura"), True),
+        (MediaAccessRequest("playback", MAIN, "127.0.0.1", "reader", "leitura"), True),
+        (MediaAccessRequest("read", MAIN, "127.0.0.1", "relay", "segredo"), False),
+        (MediaAccessRequest("read", MAIN, "127.0.0.1", "reader", "segredo"), False),
+        (MediaAccessRequest("read", MAIN, "10.0.0.5", "reader", "leitura"), False),  # navegador direto: não
+        (MediaAccessRequest("read", "outro", "127.0.0.1", "reader", "leitura"), False),
+        (MediaAccessRequest("publish", MAIN, "127.0.0.1", "reader", "leitura"), False),  # leitor não publica
         (MediaAccessRequest("playback", MAIN, "10.0.0.5", "", ""), False),
         (MediaAccessRequest("api", "", "127.0.0.1", "", ""), True),
         (MediaAccessRequest("api", "", "10.0.0.5", "", ""), False),
@@ -191,7 +198,7 @@ MAIN = path_name(CAM_ID, StreamProfile.MAIN)
     ],
 )
 def test_media_authorization(req: MediaAccessRequest, allowed: bool) -> None:
-    assert AuthorizeMediaAccess("segredo")(req) is allowed
+    assert AuthorizeMediaAccess("segredo", "leitura")(req) is allowed
 
 
 def test_redact_covers_known_secrets_and_url_formats() -> None:

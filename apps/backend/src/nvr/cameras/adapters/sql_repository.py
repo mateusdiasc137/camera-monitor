@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import RowMapping, delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from nvr.cameras.domain import Camera, CameraDriver, IngestMode
+from nvr.cameras.domain import Camera, CameraDriver, IngestMode, LensLayout
 from nvr.persistence.tables import cameras
 
 _FIELDS = (
@@ -17,6 +17,7 @@ _FIELDS = (
     "ingest",
     "enabled",
     "recording_enabled",
+    "lens_layout",
     "created_at",
     "updated_at",
 )
@@ -35,6 +36,7 @@ def _camera(row: RowMapping) -> Camera:
         ingest=IngestMode(row["ingest"]),
         enabled=row["enabled"],
         recording_enabled=row["recording_enabled"],
+        lens_layout=LensLayout(row["lens_layout"]),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -44,6 +46,7 @@ def _values(camera: Camera) -> dict[str, object]:
     values = {field: getattr(camera, field) for field in _FIELDS}
     values["driver"] = camera.driver.value
     values["ingest"] = camera.ingest.value
+    values["lens_layout"] = camera.lens_layout.value
     return values
 
 
