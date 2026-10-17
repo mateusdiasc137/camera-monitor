@@ -37,9 +37,19 @@ Mesma suíte da PoC sintética (`scripts/poc_check.py`): **10/10 OK**.
 - HLS com credencial: só vídeo `hevc` (sem áudio, como na PoC sintética).
 - 0 ocorrências de credencial nos logs.
 
+### Ao vivo no navegador (teste manual do usuário, 17/10/2026)
+
+| Cliente | `cam` (principal, H.265) | `camsub` (secundário, H.265) | Áudio G.711 |
+|---|---|---|---|
+| Chrome — celular Android, via LAN | ✅ | ✅ | ✅ |
+| Chrome — PC Windows 11 | ✅ | ✅ | ✅ |
+| Firefox, Safari/iOS | ❔ não testado | ❔ | ❔ |
+
+Conclusão: **WebRTC com H.265 + G.711 funciona sem transcodificação** nos clientes que o usuário usa. Latência ainda não medida.
+
 ## Riscos abertos
 
-1. **H.265 no navegador (crítico para o ao vivo/playback).** O suporte a HEVC no navegador depende do navegador, do SO e do hardware (Safari/iOS em geral suporta; Chrome/Edge só com decodificação por hardware; Firefox, em geral, não). Teste manual pendente em celular e PC. Alternativas se falhar, em ordem de preferência:
+1. **H.265 em outros navegadores.** Funciona no Chrome do usuário (celular e PC); o suporte a HEVC depende do navegador e do hardware (Firefox, em geral, não suporta). A UI deve detectar a falha de decodificação e mostrar mensagem clara recomendando o Chrome. Alternativas, se for preciso atender outros clientes, em ordem de preferência:
    1. Mudar o codec do **substream** para H.264 na própria câmera, se o firmware oferecer (🔒 altera configuração; exige autorização e backup da configuração anterior).
    2. Transcodificar **só o substream** (640x720) para H.264 no servidor com FFmpeg (custo baixo de CPU), mantendo a gravação do principal em H.265 sem recodificar.
    3. Playback de gravações em H.265: download funciona (VLC); no navegador depende do mesmo suporte HEVC.
@@ -47,7 +57,9 @@ Mesma suíte da PoC sintética (`scripts/poc_check.py`): **10/10 OK**.
 
 ## Pendências da Fase 0
 
-- [ ] Ao vivo H.265 no celular e no PC (WebRTC `cam` e `camsub`); latência pelo relógio da imagem
+- [x] Ao vivo H.265 no celular e no PC (WebRTC `cam` e `camsub`), com áudio
+- [ ] Latência pelo relógio da imagem
+- [ ] Playback de gravação H.265 no navegador (com e sem áudio LPCM)
 - [ ] Confirmar se são duas lentes empilhadas
 - [ ] Bitrate por 10 min, de dia e à noite; queda/retomada desconectando a câmera (F0-07)
 - [ ] ONVIF em 8899, somente leitura (F0-08)
