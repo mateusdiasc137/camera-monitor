@@ -18,7 +18,7 @@ DATA_DIR = ROOT / "data"
 
 _URL_CREDENTIALS = re.compile(r"(?P<scheme>[a-z][a-z0-9+.-]*://)[^/@\s]+@", re.IGNORECASE)
 # Formato Xiongmai com credenciais no caminho: /user=admin&password=xyz&channel=1 (ou separado por '_').
-_PATH_CREDENTIALS = re.compile(r"(?P<key>\b(?:user|username|password|pwd|pass)=)[^&_;\s/?]*", re.IGNORECASE)
+_PATH_CREDENTIALS = re.compile(r"(?P<key>\b(?:user|username|password|pwd|pass)=)[^&_;\s/?\"'<>,]*", re.IGNORECASE)
 
 
 def mask(text: str, *secrets: str) -> str:
