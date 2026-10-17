@@ -1,0 +1,45 @@
+# Câmera IP falsa para testes sem hardware.
+# Emula uma câmera RTSP com autenticação, com os perfis "main" e "sub".
+# Credenciais abaixo são SINTÉTICAS e de uso exclusivo em testes locais.
+#
+#   leitura:     rtsp://test:test@127.0.0.1:8654/main   (e /sub)
+#   publicação:  feita pelo FFmpeg via scripts/fake_camera.py (somente localhost)
+
+logLevel: warn
+
+rtsp: true
+rtspAddress: 127.0.0.1:8654
+rtspTransports: [tcp]
+rtspAuthMethods: [basic]
+
+rtmp: false
+hls: false
+webrtc: false
+srt: false
+moq: false
+api: false
+metrics: false
+pprof: false
+playback: false
+
+authMethod: internal
+authInternalUsers:
+  - user: fakepublisher
+    pass: fakepublisher
+    ips: ["127.0.0.1", "::1"]
+    permissions:
+      - action: publish
+  - user: test
+    pass: test
+    ips: []
+    permissions:
+      - action: read
+
+pathDefaults:
+  record: false
+
+paths:
+  main:
+    source: publisher
+  sub:
+    source: publisher

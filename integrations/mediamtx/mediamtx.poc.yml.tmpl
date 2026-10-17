@@ -1,0 +1,65 @@
+# Prova de conceito (F0-05): MediaMTX como ingest RTSP + ao vivo (WebRTC/HLS) + gravação + playback.
+# Template renderizado por scripts/poc_nvr.py em data/poc/mediamtx.yml (fora do Git).
+#
+# Este arquivo NÃO contém câmeras nem senhas: as câmeras são cadastradas em tempo de execução
+# pela API de controle (127.0.0.1:9997), como o backend fará na Fase 1 (decisão D2 do plano).
+# O usuário de visualização usa senha aleatória guardada só como hash SHA-256.
+
+logLevel: info
+
+# --- API de controle: somente loopback ---
+api: true
+apiAddress: 127.0.0.1:9997
+
+# --- RTSP de saída: somente loopback (consumo interno: snapshots, diagnóstico) ---
+rtsp: true
+rtspAddress: 127.0.0.1:8554
+rtspTransports: [tcp]
+
+# --- Ao vivo na LAN ---
+webrtc: true
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+webrtcAllowOrigins: []
+hls: true
+hlsAddress: :8888
+hlsAllowOrigins: []
+
+# --- Playback de gravações na LAN (com autenticação) ---
+playback: true
+playbackAddress: :9996
+playbackAllowOrigins: []
+
+rtmp: false
+srt: false
+moq: false
+metrics: false
+pprof: false
+
+# --- Autenticação: nada anônimo, exceto a API a partir do loopback ---
+authMethod: internal
+authInternalUsers:
+  - user: ${VIEWER_USER}
+    pass: ${VIEWER_PASS_HASH}
+    ips: []
+    permissions:
+      - action: read
+      - action: playback
+  - user: any
+    pass:
+    ips: ["127.0.0.1", "::1"]
+    permissions:
+      - action: api
+
+# --- Gravação (aplicada aos paths criados pela API) ---
+pathDefaults:
+  rtspTransport: tcp
+  record: false
+  recordPath: ${RECORD_PATH}
+  recordFormat: fmp4
+  recordPartDuration: 1s
+  recordSegmentDuration: ${SEGMENT_DURATION}
+  # Retenção desligada aqui: será responsabilidade do backend (decisão D4 do plano).
+  recordDeleteAfter: 0s
+
+paths: {}

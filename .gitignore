@@ -1,0 +1,56 @@
+# --- Segredos e configuração local (nunca versionar) ---
+.env
+.env.*
+!.env.example
+*.secret
+*.key
+*.pem
+
+# --- Dados de execução: gravações, banco, snapshots, logs ---
+data/
+*.db
+*.db-journal
+*.sqlite
+*.mp4
+*.m4s
+*.ts
+*.mkv
+*.jpg
+*.jpeg
+!docs/**/*.jpg
+logs/
+*.log
+
+# --- Binários de terceiros baixados por scripts/fetch-tools ---
+tools/*
+!tools/README.md
+!tools/manifest.json
+
+# --- Saídas brutas de testes com a câmera real (podem conter serial/MAC) ---
+docs/compatibility/raw/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# --- Node / frontend ---
+node_modules/
+apps/web/dist/
+playwright-report/
+test-results/
+
+# --- Editores e SO ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

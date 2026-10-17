@@ -1,0 +1,22 @@
+{
+  "mediamtx": {
+    "version": "v1.21.2",
+    "license": "MIT",
+    "source": "https://github.com/bluenviron/mediamtx",
+    "url": "https://github.com/bluenviron/mediamtx/releases/download/{version}/{asset}",
+    "assets": {
+      "windows-amd64": {
+        "asset": "mediamtx_v1.21.2_windows_amd64.zip",
+        "sha256": "a84224f5a490855684e62ba6fb71e80ea2a5e16aed61883bb58380290e93e467"
+      },
+      "linux-amd64": {
+        "asset": "mediamtx_v1.21.2_linux_amd64.tar.gz",
+        "sha256": "121be6e00397e473a95d83c75f4fcd3819a6af3b0e1a50889cba43ab4fab6a27"
+      },
+      "linux-arm64": {
+        "asset": "mediamtx_v1.21.2_linux_arm64.tar.gz",
+        "sha256": "180a235374a548d9133cdd5e20f5dbd8b01317be1c86e0d7e66df585dc42ed6f"
+      }
+    }
+  }
+}
