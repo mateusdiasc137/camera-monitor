@@ -49,7 +49,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "ASYNC", "PT"]
 ignore = ["RUF001", "RUF002", "RUF003"]  # textos em português com acentos
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106", "S107"]
+"tests/**" = ["S101", "S105", "S106", "S107", "S603", "S607", "ASYNC220", "ASYNC221"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -67,6 +67,10 @@ markers = [
     "manual_camera: exige a câmera real e credenciais no .env (nunca roda na CI)",
 ]
 addopts = "-m 'not manual_camera'"
+filterwarnings = [
+    # Pipes/transportes asyncio não fechados indicam vazamento de processo (relays): falhar o teste.
+    "error::pytest.PytestUnraisableExceptionWarning",
+]
 
 # ------------------------------------------- regras de dependência (ADR-001)
 

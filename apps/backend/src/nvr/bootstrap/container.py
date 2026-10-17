@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import secrets as secrets_module
 from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -27,6 +28,9 @@ from nvr.identity.adapters.sql_repositories import SqlSessionRepository, SqlUser
 from nvr.identity.application import Authenticate, CreateUser, Login, Logout
 from nvr.persistence.database import create_engine
 from nvr.shared.clock import SystemClock
+from nvr.streaming.adapters.ffmpeg_relay import FfmpegRelaySupervisor
+from nvr.streaming.adapters.mediamtx_api import MediaMtxApi
+from nvr.streaming.application import AuthorizeMediaAccess, ReconcileMedia
 from nvr.system.adapters.database_probe import DatabaseProbe
 from nvr.system.adapters.sql_audit import SqlAuditLog
 from nvr.system.application import GetSystemHealth
@@ -49,8 +53,14 @@ class Container:
     update_camera: UpdateCamera
     delete_camera: DeleteCamera
     test_camera_connection: TestCameraConnection
+    reconcile_media: ReconcileMedia
+    authorize_media_access: AuthorizeMediaAccess
+    media_api: MediaMtxApi
+    relays: FfmpegRelaySupervisor
 
     async def aclose(self) -> None:
+        await self.relays.stop_all()
+        await self.media_api.aclose()
         await self.engine.dispose()
 
 
@@ -76,6 +86,13 @@ def build_container(
     cameras = SqlCameraRepository(engine)
     secrets = secrets if secrets is not None else build_secret_store(settings)
     camera_deps = (cameras, secrets, audit, clock)
+    # Segredo do publicador local, novo a cada inicialização (ADR-002/003):
+    # só os relays deste processo conseguem publicar no MediaMTX.
+    relay_secret = secrets_module.token_urlsafe(24)
+    media_api = MediaMtxApi(settings.mediamtx_api_url)
+    relays = FfmpegRelaySupervisor(
+        settings.ffmpeg_path, settings.mediamtx_rtsp_address, AuthorizeMediaAccess.RELAY_USER, relay_secret
+    )
     return Container(
         settings=settings,
         engine=engine,
@@ -90,4 +107,10 @@ def build_container(
         update_camera=UpdateCamera(*camera_deps),
         delete_camera=DeleteCamera(*camera_deps),
         test_camera_connection=TestCameraConnection(*camera_deps, probe=probe or RtspDescribeProbe()),
+        reconcile_media=ReconcileMedia(
+            cameras, secrets, media_api, relays, settings.resolved_recordings_dir().as_posix()
+        ),
+        authorize_media_access=AuthorizeMediaAccess(relay_secret),
+        media_api=media_api,
+        relays=relays,
     )

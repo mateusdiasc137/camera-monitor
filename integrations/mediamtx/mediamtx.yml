@@ -1,0 +1,57 @@
+# Configuração do MediaMTX para o NVR (Fase 1). SEM câmeras e SEM segredos:
+# as câmeras são criadas pelo backend via API de controle (em memória) e cada stream chega
+# por um relay FFmpeg local (ADR-002). A autorização é feita pelo backend (ADR-003).
+#
+# Rodar em desenvolvimento:  python scripts/dev_mediamtx.py
+# Produção (Ubuntu): serviço systemd nvr-mediamtx apontando para este arquivo (F1-19).
+
+logLevel: info
+
+# --- Autenticação: o backend decide (publish só do relay local; leitura com token, a partir da F1-08)
+authMethod: http
+authHTTPAddress: http://127.0.0.1:8000/internal/mediamtx/auth
+authHTTPExclude:
+  # A API de controle só escuta no loopback; o backend a usa sem credencial.
+  - action: api
+  - action: metrics
+
+# --- API de controle: somente loopback
+api: true
+apiAddress: 127.0.0.1:9997
+
+# --- RTSP: só loopback (relays publicam aqui; nada exposto na LAN)
+rtsp: true
+rtspAddress: 127.0.0.1:8554
+rtspTransports: [tcp]
+rtmp: false
+srt: false
+moq: false
+
+# --- Ao vivo e playback: atrás do proxy HTTPS em produção (F1-18). Em desenvolvimento, ficam na LAN
+# para testes no celular, mas exigem autorização do backend (que nega leitura até a F1-08).
+webrtc: true
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+webrtcAllowOrigins: []
+hls: true
+hlsAddress: :8888
+hlsAllowOrigins: []
+playback: true
+playbackAddress: :9996
+playbackAllowOrigins: []
+
+metrics: false
+pprof: false
+
+pathDefaults:
+  source: publisher
+  overridePublisher: true
+  record: false
+  recordFormat: fmp4
+  recordPartDuration: 1s
+  recordSegmentDuration: 5m
+  # Retenção desligada: a política de cota/substituição é do backend (ADR-006).
+  recordDeleteAfter: 0s
+
+# Nenhum path estático: só os criados pelo backend ("cam-<id>-main|sub") existem.
+paths: {}

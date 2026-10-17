@@ -29,7 +29,9 @@
 - [x] F1-03 autenticação do painel (backend + UI de login)
 - [x] F1-04 cadastro de câmeras (senha no cofre do SO; caminho com {user}/{password})
 - [x] F1-05 teste de conexão (DESCRIBE RTSP próprio; validado na X6C-WEQ: H265+PCMA, auth_error com senha errada)
-- [ ] F1-06 adaptador MediaMTX + relay + reconciliador (próximo)
+- [x] F1-06 MediaMTX + relays FFmpeg supervisionados pelo backend + reconciliação (validado com a câmera real)
+- [x] F1-06b liga/desliga gravação por câmera (campo `recording_enabled`, aplicado na reconciliação)
+- [ ] F1-07 estado da câmera (online/offline/auth_error) e SSE (próximo)
 
 > Convenções: cada tarefa tem ID (`F1-07`), entregáveis, critério de "pronto" verificável e dependências.
 > 🔒 = exige autorização explícita do usuário antes de executar (altera estado da câmera ou age fisicamente).

@@ -63,3 +63,9 @@ class OperationTimeout(AppError):
 
 class ResourceBusy(AppError):
     code = "resource_busy"
+
+
+class MediaServerUnavailable(AppError):
+    """O servidor de mídia (MediaMTX) não respondeu ou recusou a configuração."""
+
+    code = "media_server_unavailable"

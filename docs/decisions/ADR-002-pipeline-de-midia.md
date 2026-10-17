@@ -1,6 +1,6 @@
 # ADR-002 — Pipeline de mídia: MediaMTX + relay FFmpeg por stream
 
-**Estado:** aceito (com o item "supervisão do relay" a validar na F1-06) · **Data:** 17/10/2026
+**Estado:** aceito · **Data:** 17/10/2026 · **Revisão:** supervisão dos relays decidida na F1-06 (item 3)
 **Evidências:** `docs/compatibility/poc-f0-05-mediamtx.md`, `docs/compatibility/X6C-WEQ.md` §4
 
 ## Contexto
@@ -20,8 +20,11 @@ câmera ──RTSP──> FFmpeg relay (-c copy, timestamps do servidor) ──R
 
 1. **MediaMTX é o único motor de mídia** (ao vivo, gravação, playback). Sem pipeline de codecs próprio.
 2. **Cada stream de câmera passa por um relay FFmpeg** que não recodifica e reescreve os timestamps com o relógio do servidor. O relay é uma estratégia de *ingest* configurável por câmera (`ingest: direct | relay`), com padrão `relay`: câmeras com timestamps corretos podem usar `direct`.
-3. **Supervisão do relay:** preferir o próprio MediaMTX (`runOnInit` + `runOnInitRestart: yes` no path criado pela API), evitando um supervisor de processos no backend. Validar na F1-06; se não atender (logs, mascaramento, reconexão), o backend supervisiona os processos com o mesmo contrato.
-4. O publish no MediaMTX só é aceito de `127.0.0.1` com credencial aleatória gerada pelo backend a cada inicialização.
+3. **Supervisão do relay: no backend** (decidido na F1-06). O `runOnInit` do MediaMTX foi descartado após ler o código da v1.21.2 (`internal/externalcmd`): ele divide o comando com `shellquote` e depois aplica `os.Expand` em cada argumento, **sem forma de escapar `$`**. Uma senha de câmera com `$` seria corrompida silenciosamente. O backend (`FfmpegRelaySupervisor`) executa o FFmpeg com lista de argumentos (sem shell), mascara o stderr antes do log, reinicia com backoff (2 s → 30 s) e expõe o estado de cada relay para a F1-07.
+   - **Custo aceito:** reiniciar o backend reinicia os relays (buraco de poucos segundos na gravação).
+   - **Se o backend morrer sem encerrar os filhos** (no Windows, matar à força não encerra a árvore), um relay órfão continua publicando até o próximo backend assumir o path (`overridePublisher: true`), quando o órfão perde a sessão e sai. No Ubuntu, o systemd encerra o cgroup inteiro.
+   - Validado com a X6C-WEQ: paths criados pela API, publicação autorizada pelo backend, gravação só do principal, leitura sem token negada (401), relay morto à força volta em ~2 s, nenhuma senha nos logs.
+4. O publish no MediaMTX só é aceito de `127.0.0.1` com credencial aleatória gerada pelo backend a cada inicialização, verificada pelo próprio backend (`authMethod: http` → `/internal/mediamtx/auth`).
 
 ## Consequências
 

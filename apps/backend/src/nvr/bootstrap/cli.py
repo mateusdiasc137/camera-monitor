@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import getpass
 import json
+import logging
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -18,17 +19,28 @@ from nvr.bootstrap.container import Container, build_container
 from nvr.bootstrap.settings import Settings
 from nvr.http.app import create_app
 from nvr.identity.domain import Role
+from nvr.jobs.periodic import PeriodicTask
 from nvr.persistence.database import migrate
 from nvr.shared.errors import AppError
 
 
 def build_app(container: Container) -> FastAPI:
-    @asynccontextmanager
-    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        yield
-        await container.aclose()
-
     settings = container.settings
+    media_sync = PeriodicTask(
+        "reconciliação de mídia", settings.media_sync_interval, container.reconcile_media
+    )
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        if settings.media_enabled:
+            media_sync.start()
+            app.state.media_sync = media_sync
+        try:
+            yield
+        finally:
+            await media_sync.stop()
+            await container.aclose()
+
     return create_app(
         container,
         cookie_secure=settings.cookie_secure,
@@ -66,6 +78,8 @@ def main(argv: list[str] | None = None) -> int:
     openapi.add_argument("--output", type=Path, help="arquivo de saída (padrão: stdout)")
     args = parser.parse_args(argv)
 
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # a reconciliação consulta o MediaMTX a cada ciclo
     settings = Settings()
     if args.cmd == "migrate":
         migrate(settings.data_dir)

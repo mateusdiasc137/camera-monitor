@@ -36,6 +36,20 @@ class Settings(BaseSettings):
         description="raízes nas quais a UI pode escolher o local de gravação",
     )
 
+    # --- mídia (ADR-002) ---
+    media_enabled: bool = Field(default=True, description="liga a reconciliação com o MediaMTX e os relays")
+    mediamtx_api_url: str = "http://127.0.0.1:9997"
+    mediamtx_rtsp_address: str = Field(default="127.0.0.1:8554", description="onde os relays publicam")
+    ffmpeg_path: str = "ffmpeg"
+    media_sync_interval: float = Field(default=15.0, description="segundos entre reconciliações")
+    recordings_dir: Path | None = Field(
+        default=None,
+        description="pasta das gravações até a F1-11b (local pela UI); padrão: data_dir/recordings",
+    )
+
+    def resolved_recordings_dir(self) -> Path:
+        return (self.recordings_dir or self.data_dir / "recordings").resolve()
+
     def resolved_secret_key_file(self) -> Path:
         if self.secret_key_file is not None:
             return self.secret_key_file

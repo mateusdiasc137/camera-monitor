@@ -30,6 +30,12 @@ jobs:
           enable-cache: true
           cache-dependency-glob: apps/backend/uv.lock
       - run: uv sync --locked
+      - name: MediaMTX para os testes de integração (hash conferido)
+        working-directory: .
+        run: python scripts/fetch_tools.py
+      - name: FFmpeg (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
       - name: ruff (lint)
         run: uv run ruff check .
       - name: ruff (formatação)

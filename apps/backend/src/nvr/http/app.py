@@ -18,10 +18,11 @@ from nvr.cameras.application import (
     TestCameraConnection,
     UpdateCamera,
 )
-from nvr.http.routers import auth, cameras, system
+from nvr.http.routers import auth, cameras, internal, system
 from nvr.http.security import SameOriginMiddleware, current_user
 from nvr.identity.application import Authenticate, Login, Logout
 from nvr.shared import errors
+from nvr.streaming.application import AuthorizeMediaAccess, ReconcileMedia
 from nvr.system.application import GetSystemHealth
 
 _STATUS = {
@@ -59,6 +60,10 @@ class UseCases(Protocol):
     def delete_camera(self) -> DeleteCamera: ...
     @property
     def test_camera_connection(self) -> TestCameraConnection: ...
+    @property
+    def reconcile_media(self) -> ReconcileMedia: ...
+    @property
+    def authorize_media_access(self) -> AuthorizeMediaAccess: ...
 
 
 def create_app(
@@ -91,6 +96,7 @@ def create_app(
 
     # Público: só o login. Todo o resto exige sessão (ADR-003).
     app.include_router(auth.router, prefix="/api/v1")
+    app.include_router(internal.router)  # só loopback; checado no próprio endpoint
     protected = [Depends(current_user)]
     app.include_router(system.router, prefix="/api/v1", dependencies=protected)
     app.include_router(cameras.router, prefix="/api/v1", dependencies=protected)

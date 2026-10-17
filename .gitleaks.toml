@@ -15,4 +15,8 @@ regexes = [
   '''^s3nh(@|%40)&?forte$''',
   '''^nova-senha-1$''',
   '''^outra-senha$''',
+  '''^pub-secret$''',
+  '''^Segredo\$1$''',
+  '''^segredo$''',
+  '''^pw\$&'1$''',
 ]

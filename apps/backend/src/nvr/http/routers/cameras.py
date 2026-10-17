@@ -18,6 +18,13 @@ Driver = Literal["generic_rtsp", "xiongmai"]
 Ingest = Literal["relay", "direct"]
 
 
+def _sync_media(request: Request) -> None:
+    """Pede uma reconciliação imediata do MediaMTX/relays (se a mídia estiver ativa)."""
+    media_sync = getattr(request.app.state, "media_sync", None)
+    if media_sync is not None:
+        media_sync.trigger()
+
+
 class CameraOut(BaseModel):
     id: str
     name: str
@@ -130,7 +137,9 @@ async def create_camera(body: CameraCreateIn, request: Request, admin: AdminUser
         enabled=body.enabled,
         recording_enabled=body.recording_enabled,
     )
-    return CameraOut.from_domain(await request.app.state.use_cases.register_camera(draft, admin.username))
+    camera = await request.app.state.use_cases.register_camera(draft, admin.username)
+    _sync_media(request)
+    return CameraOut.from_domain(camera)
 
 
 @router.patch("/{camera_id}", response_model=CameraOut)
@@ -153,12 +162,14 @@ async def update_camera(
         credentials=credentials,
     )
     camera = await request.app.state.use_cases.update_camera(camera_id, changes, admin.username)
+    _sync_media(request)
     return CameraOut.from_domain(camera)
 
 
 @router.delete("/{camera_id}", status_code=204)
 async def delete_camera(camera_id: str, request: Request, admin: AdminUser) -> None:
     await request.app.state.use_cases.delete_camera(camera_id, admin.username)
+    _sync_media(request)
 
 
 @router.post("/{camera_id}/test", response_model=list[ProbeResultOut], dependencies=[Depends(require_admin)])
