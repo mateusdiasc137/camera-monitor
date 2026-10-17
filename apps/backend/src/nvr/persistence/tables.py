@@ -65,6 +65,17 @@ users = Table(
     CheckConstraint("role in ('admin', 'viewer')", name="role"),
 )
 
+sessions = Table(
+    "sessions",
+    metadata,
+    Column("token_hash", String(64), primary_key=True),  # SHA-256 do token; o token nunca é gravado
+    Column("user_id", String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("created_at", UTCDateTime, nullable=False),
+    Column("expires_at", UTCDateTime, nullable=False),
+    Column("last_seen_at", UTCDateTime, nullable=False),
+)
+Index("ix_sessions_expires_at", sessions.c.expires_at)
+
 cameras = Table(
     "cameras",
     metadata,

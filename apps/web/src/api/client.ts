@@ -13,3 +13,22 @@ export const api = createClient<paths>({
 })
 
 export type SystemHealth = components['schemas']['SystemHealthOut']
+export type CurrentUser = components['schemas']['UserOut']
+
+/** Erro de API com o status HTTP e a mensagem amigável enviada pelo backend. */
+export class ApiError extends Error {
+  readonly status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
+export function apiError(response: Response, body: unknown, fallback: string): ApiError {
+  const message =
+    typeof body === 'object' && body !== null && 'message' in body && typeof body.message === 'string'
+      ? body.message
+      : fallback
+  return new ApiError(response.status, message)
+}

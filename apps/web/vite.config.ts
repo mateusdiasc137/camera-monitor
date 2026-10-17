@@ -7,7 +7,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'http://127.0.0.1:8000',
+      // changeOrigin: false preserva o Host, como o Caddy faz em produção; sem isso a checagem
+      // de Origin do backend recusa todas as mutações (o atalho em string usa changeOrigin: true).
+      '/api': { target: 'http://127.0.0.1:8000', changeOrigin: false },
     },
   },
   test: {
