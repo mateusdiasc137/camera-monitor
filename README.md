@@ -34,7 +34,7 @@ No PowerShell, defina a variável com `$env:NVR_COOKIE_SECURE="false"` antes de 
 
 Para abrir a interface no celular (mesma rede): `npm run dev -- --host` e acesse `http://<IP-do-PC>:5173`. O vídeo ao vivo usa a porta **UDP 8189** do MediaMTX: no Windows, permita o `mediamtx.exe` no firewall para redes privadas.
 
-Com o MediaMTX rodando, o backend cria sozinho um path por câmera cadastrada (`cam-<id>-main`/`-sub`), sobe um relay FFmpeg para cada um e grava o perfil principal em `apps/backend/data/recordings/` (enquanto a escolha do local pela UI não chega, na F1-11b).
+Com o MediaMTX rodando, o backend cria sozinho um path por câmera cadastrada (`cam-<id>-main`/`-sub`), sobe um relay FFmpeg para cada um e grava o perfil principal em `apps/backend/data/recordings/`. O local pode ser trocado na aba **Armazenamento**, dentro das pastas liberadas em `NVR_STORAGE_ROOTS` (JSON, ex.: `NVR_STORAGE_ROOTS='["D:/nvr"]'`; padrão: só a pasta inicial).
 
 ## Pré-requisitos
 

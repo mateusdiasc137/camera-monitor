@@ -33,7 +33,7 @@ function RecordingPlayer({ camera, clip, onPosition, onEnded }: {
   camera: Camera
   clip: Clip
   onPosition: (t: Date) => void
-  onEnded: () => void
+  onEnded: (playedS: number) => void
 }) {
   const stacked = camera.lens_layout === 'stacked2'
   const [lens, setLens] = useState<LensView>('both')
@@ -75,7 +75,7 @@ function RecordingPlayer({ camera, clip, onPosition, onEnded }: {
             setSize({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight })
           }}
           onTimeUpdate={(e) => onPosition(new Date(clip.start.getTime() + e.currentTarget.currentTime * 1000))}
-          onEnded={onEnded}
+          onEnded={(e) => onEnded(e.currentTarget.currentTime)}
           onError={() => setError('Não foi possível reproduzir este trecho.')}
         />
         {error && <div className="live-overlay live-overlay--error">{error}</div>}
@@ -115,9 +115,12 @@ export function RecordingsPage() {
     playerRef.current?.scrollIntoView?.({ block: 'nearest' })
   }
 
-  function playNext() {
+  function playNext(playedS: number) {
     if (!clip) return
-    const after = new Date(clip.start.getTime() + clip.durationS * 1000 + 500)
+    // Continua de onde o vídeo parou de fato: o servidor encerra o trecho num buraco curto (gravador
+    // reiniciado) que a linha do tempo une ao intervalo; o backend pula o buraco no pedido seguinte.
+    const played = Math.min(playedS, clip.durationS)
+    const after = new Date(clip.start.getTime() + played * 1000 + 500)
     const next = clipFrom(after, recordings.data)
     setClip(next)
     if (!next) setNotice('Fim das gravações deste dia.')

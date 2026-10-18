@@ -3,7 +3,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Storage } from '../../api/client'
 import { fakeServer } from '../../test/fakeServer'
-import { formatBytes, StoragePage } from './StoragePage'
+import { formatBytes } from './format'
+import { StoragePage } from './StoragePage'
 
 const GB = 1024 ** 3
 

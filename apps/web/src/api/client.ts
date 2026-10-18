@@ -22,6 +22,10 @@ export type CameraStatus = components['schemas']['CameraStatusOut']
 export type Recordings = components['schemas']['RecordingsOut']
 export type Storage = components['schemas']['StorageOut']
 export type StoragePolicyIn = components['schemas']['PolicyIn']
+export type FolderListing = components['schemas']['FolderListingOut']
+export type LocationCheck = components['schemas']['LocationCheckOut']
+export type LocationChange = components['schemas']['LocationChangeOut']
+export type StorageMigration = components['schemas']['MigrationOut']
 
 /** Erro de API com o status HTTP, a mensagem amigável e, em validações, os erros por campo. */
 export class ApiError extends Error {

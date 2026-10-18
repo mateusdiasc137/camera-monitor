@@ -2,7 +2,7 @@
 
 import asyncio
 from collections.abc import AsyncIterator, Iterator
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -14,6 +14,7 @@ from nvr.bootstrap.settings import Settings
 from nvr.identity.domain import Role
 from nvr.persistence.database import migrate
 from nvr.recordings.application import OpenRecording
+from nvr.recordings.domain import Segment
 from nvr.shared.errors import NotFound
 
 PASSWORD = "senha-forte-123"
@@ -107,3 +108,35 @@ def test_requires_login_and_existing_camera(env: dict) -> None:  # type: ignore[
     assert client.get("/api/v1/recordings/nao-existe/video", params=params).status_code == 404
     client.cookies.clear()
     assert client.get(f"/api/v1/recordings/{env['camera']['id']}/video", params=params).status_code == 401
+
+
+class FakeIndex:
+    """Dois segmentos com um buraco de 0,6 s entre eles (gravador reiniciado)."""
+
+    def __init__(self) -> None:
+        t0 = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)
+        self.first = Segment("c", "l", "cam-c-main/a.mp4", t0, 3.0, 1)
+        self.second = Segment("c", "l", "cam-c-main/b.mp4", t0 + timedelta(seconds=3.6), 3.0, 1)
+
+    async def in_range(self, camera_id: str, start: datetime, end: datetime) -> list[Segment]:
+        return [s for s in (self.first, self.second) if s.start_at < end and s.end_at > start]
+
+
+def test_start_inside_a_short_gap_moves_to_next_segment() -> None:
+    index, playback = FakeIndex(), FakePlayback()
+
+    class Cameras:
+        async def get(self, camera_id: str) -> object:
+            return type("Cam", (), {"id": camera_id, "name": "Quintal"})()
+
+    use_case = OpenRecording(Cameras(), playback, index)  # type: ignore[arg-type]
+    in_gap = index.first.end_at + timedelta(seconds=0.2)
+    clip = asyncio.run(use_case("c", in_gap, 4.0, "fmp4"))
+    _path, start, duration, _fmt = playback.calls[-1]
+    assert start == index.second.start_at + timedelta(milliseconds=1)
+    assert duration == pytest.approx(4.0 - 0.4 - 0.001)  # o fim pedido continua o mesmo
+    assert clip.start == start
+
+    inside = index.first.start_at + timedelta(seconds=1)
+    asyncio.run(use_case("c", inside, 4.0, "fmp4"))
+    assert playback.calls[-1][1] == inside  # dentro de um segmento: não mexe

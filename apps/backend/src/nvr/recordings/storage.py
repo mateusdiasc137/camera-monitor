@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 MIN_QUOTA_GB = 1.0
 
 
-def _gb(value: float) -> str:
+def gb_text(value: float) -> str:
     """Gigabytes com vírgula decimal, para mensagens ao usuário."""
     return f"{value / GIB:.1f}".replace(".", ",")
 
@@ -301,13 +301,13 @@ class UpdateStoragePolicy:
             if quota > possible:
                 raise ValidationFailed(
                     "a cota não cabe no disco",
-                    {"quota_gb": f"o máximo possível neste disco é {_gb(max(possible, 0))} GB"},
+                    {"quota_gb": f"o máximo possível neste disco é {gb_text(max(possible, 0))} GB"},
                 )
             would_delete = snapshot.used_bytes - int(quota * current.low_watermark)
             if replacement is ReplacementPolicy.OVERWRITE_OLDEST and would_delete > 0 and not confirm:
                 raise ConfirmationRequired(
                     "a nova cota é menor que o já gravado: cerca de "
-                    f"{_gb(would_delete)} GB das gravações mais antigas serão apagados",
+                    f"{gb_text(would_delete)} GB das gravações mais antigas serão apagados",
                     {"would_delete_bytes": would_delete, "used_bytes": snapshot.used_bytes},
                 )
         policy = replace(current, quota_bytes=quota, replacement=replacement)

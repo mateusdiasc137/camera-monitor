@@ -254,6 +254,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/storage/browse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Browse */
+        get: operations["browse_api_v1_storage_browse_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storage/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change Location */
+        put: operations["change_location_api_v1_storage_location_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storage/location/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate Location */
+        post: operations["validate_location_api_v1_storage_location_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storage/migration/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Abandon Migration */
+        post: operations["abandon_migration_api_v1_storage_migration_abandon_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storage/migration/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Migration */
+        post: operations["resume_migration_api_v1_storage_migration_resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/storage/policy": {
         parameters: {
             query?: never;
@@ -494,6 +579,28 @@ export interface components {
              */
             state: "ok" | "degraded" | "down";
         };
+        /** FolderListingOut */
+        FolderListingOut: {
+            /** Folders */
+            folders: components["schemas"]["FolderOut"][];
+            /**
+             * Parent
+             * @description null = subir volta à lista das raízes
+             */
+            parent: string | null;
+            /**
+             * Path
+             * @description null = lista das raízes permitidas
+             */
+            path: string | null;
+        };
+        /** FolderOut */
+        FolderOut: {
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+        };
         /** GapOut */
         GapOut: {
             /**
@@ -530,12 +637,111 @@ export interface components {
              */
             start: string;
         };
+        /** LocationChangeIn */
+        LocationChangeIn: {
+            /**
+             * Mode
+             * @description migrate = mover as gravações existentes; fresh = começar vazio (as antigas ficam na pasta anterior)
+             * @enum {string}
+             */
+            mode: "migrate" | "fresh";
+            /** Path */
+            path: string;
+        };
+        /** LocationChangeOut */
+        LocationChangeOut: {
+            /** Location Path */
+            location_path: string;
+            migration: components["schemas"]["MigrationOut"] | null;
+            /**
+             * Unindexed Segments
+             * @description modo fresh: segmentos que saíram da linha do tempo
+             */
+            unindexed_segments: number;
+            /** Warnings */
+            warnings: string[];
+        };
+        /** LocationCheckOut */
+        LocationCheckOut: {
+            /**
+             * Current Bytes
+             * @description gravações do NVR no local atual (o que a migração moveria)
+             */
+            current_bytes: number;
+            /** Current Path */
+            current_path: string | null;
+            /** Disk Free Bytes */
+            disk_free_bytes: number | null;
+            /** Disk Total Bytes */
+            disk_total_bytes: number | null;
+            /** Errors */
+            errors: string[];
+            /**
+             * Existing Bytes
+             * @description gravações do NVR que já estão na pasta escolhida
+             */
+            existing_bytes: number;
+            /**
+             * Migrate Problem
+             * @description vazio = dá para mover as gravações
+             */
+            migrate_problem: string;
+            /** Ok */
+            ok: boolean;
+            /** Path */
+            path: string;
+            /** Same Volume */
+            same_volume: boolean;
+            /** Warnings */
+            warnings: string[];
+            /** Will Create */
+            will_create: boolean;
+        };
+        /** LocationIn */
+        LocationIn: {
+            /** Path */
+            path: string;
+        };
         /** LoginIn */
         LoginIn: {
             /** Password */
             password: string;
             /** Username */
             username: string;
+        };
+        /**
+         * MigrationOut
+         * @description Também é o conteúdo do evento SSE `storage.migration`.
+         */
+        MigrationOut: {
+            /** Error */
+            error: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** From Path */
+            from_path: string | null;
+            /** Id */
+            id: string;
+            /** Moved Bytes */
+            moved_bytes: number;
+            /** Moved Files */
+            moved_files: number;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "running" | "done" | "failed" | "abandoned";
+            /** To Path */
+            to_path: string | null;
+            /** Total Bytes */
+            total_bytes: number;
+            /** Total Files */
+            total_files: number;
         };
         /** PolicyIn */
         PolicyIn: {
@@ -630,6 +836,8 @@ export interface components {
             last_cleanup: components["schemas"]["CleanupOut"] | null;
             /** Location Path */
             location_path: string;
+            /** @description a troca de local mais recente */
+            migration?: components["schemas"]["MigrationOut"] | null;
             /** Pause Reason */
             pause_reason: string;
             policy: components["schemas"]["PolicyOut"];
@@ -1199,6 +1407,143 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageOut"];
+                };
+            };
+        };
+    };
+    browse_api_v1_storage_browse_get: {
+        parameters: {
+            query?: {
+                path?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FolderListingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_location_api_v1_storage_location_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocationChangeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationChangeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_location_api_v1_storage_location_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationCheckOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    abandon_migration_api_v1_storage_migration_abandon_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationOut"];
+                };
+            };
+        };
+    };
+    resume_migration_api_v1_storage_migration_resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationOut"];
                 };
             };
         };

@@ -40,9 +40,18 @@ def build_app(container: Container) -> FastAPI:
     container.enforce_storage_policy.on_gate_change = media_sync.trigger
     container.update_storage_policy.on_change = storage.trigger
 
+    def location_changed() -> None:  # novo local: recordPath no MediaMTX, índice e cota já
+        media_sync.trigger()
+        indexer.trigger()
+        storage.trigger()
+
+    container.change_storage_location.on_change = location_changed
+    container.migration_runner.on_finished = location_changed
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await container.ensure_storage_location()
+        container.migration_runner.start()  # retoma a migração interrompida por um reinício, se houver
         if settings.media_enabled:
             media_sync.start()
             health_monitor.start()

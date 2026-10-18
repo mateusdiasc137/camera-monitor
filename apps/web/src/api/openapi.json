@@ -529,6 +529,66 @@
         "title": "ComponentHealthOut",
         "type": "object"
       },
+      "FolderListingOut": {
+        "properties": {
+          "folders": {
+            "items": {
+              "$ref": "#/components/schemas/FolderOut"
+            },
+            "title": "Folders",
+            "type": "array"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null = subir volta à lista das raízes",
+            "title": "Parent"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null = lista das raízes permitidas",
+            "title": "Path"
+          }
+        },
+        "required": [
+          "path",
+          "parent",
+          "folders"
+        ],
+        "title": "FolderListingOut",
+        "type": "object"
+      },
+      "FolderOut": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "path"
+        ],
+        "title": "FolderOut",
+        "type": "object"
+      },
       "GapOut": {
         "properties": {
           "end": {
@@ -593,6 +653,182 @@
         "title": "IntervalOut",
         "type": "object"
       },
+      "LocationChangeIn": {
+        "properties": {
+          "mode": {
+            "description": "migrate = mover as gravações existentes; fresh = começar vazio (as antigas ficam na pasta anterior)",
+            "enum": [
+              "migrate",
+              "fresh"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "path": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "mode"
+        ],
+        "title": "LocationChangeIn",
+        "type": "object"
+      },
+      "LocationChangeOut": {
+        "properties": {
+          "location_path": {
+            "title": "Location Path",
+            "type": "string"
+          },
+          "migration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MigrationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unindexed_segments": {
+            "description": "modo fresh: segmentos que saíram da linha do tempo",
+            "title": "Unindexed Segments",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "location_path",
+          "migration",
+          "unindexed_segments",
+          "warnings"
+        ],
+        "title": "LocationChangeOut",
+        "type": "object"
+      },
+      "LocationCheckOut": {
+        "properties": {
+          "current_bytes": {
+            "description": "gravações do NVR no local atual (o que a migração moveria)",
+            "title": "Current Bytes",
+            "type": "integer"
+          },
+          "current_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Path"
+          },
+          "disk_free_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disk Free Bytes"
+          },
+          "disk_total_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disk Total Bytes"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "existing_bytes": {
+            "description": "gravações do NVR que já estão na pasta escolhida",
+            "title": "Existing Bytes",
+            "type": "integer"
+          },
+          "migrate_problem": {
+            "description": "vazio = dá para mover as gravações",
+            "title": "Migrate Problem",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "same_volume": {
+            "title": "Same Volume",
+            "type": "boolean"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "will_create": {
+            "title": "Will Create",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path",
+          "ok",
+          "errors",
+          "warnings",
+          "will_create",
+          "disk_total_bytes",
+          "disk_free_bytes",
+          "current_path",
+          "current_bytes",
+          "existing_bytes",
+          "same_volume",
+          "migrate_problem"
+        ],
+        "title": "LocationCheckOut",
+        "type": "object"
+      },
+      "LocationIn": {
+        "properties": {
+          "path": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "LocationIn",
+        "type": "object"
+      },
       "LoginIn": {
         "properties": {
           "password": {
@@ -613,6 +849,99 @@
           "password"
         ],
         "title": "LoginIn",
+        "type": "object"
+      },
+      "MigrationOut": {
+        "description": "Também é o conteúdo do evento SSE `storage.migration`.",
+        "properties": {
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "from_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Path"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "moved_bytes": {
+            "title": "Moved Bytes",
+            "type": "integer"
+          },
+          "moved_files": {
+            "title": "Moved Files",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "running",
+              "done",
+              "failed",
+              "abandoned"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "to_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Path"
+          },
+          "total_bytes": {
+            "title": "Total Bytes",
+            "type": "integer"
+          },
+          "total_files": {
+            "title": "Total Files",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "from_path",
+          "to_path",
+          "total_files",
+          "total_bytes",
+          "moved_files",
+          "moved_bytes",
+          "error",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "MigrationOut",
         "type": "object"
       },
       "PolicyIn": {
@@ -846,6 +1175,17 @@
           "location_path": {
             "title": "Location Path",
             "type": "string"
+          },
+          "migration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MigrationOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "a troca de local mais recente"
           },
           "pause_reason": {
             "title": "Pause Reason",
@@ -1769,6 +2109,179 @@
           }
         },
         "summary": "Get Storage",
+        "tags": [
+          "storage"
+        ]
+      }
+    },
+    "/api/v1/storage/browse": {
+      "get": {
+        "operationId": "browse_api_v1_storage_browse_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "path",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderListingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Browse",
+        "tags": [
+          "storage"
+        ]
+      }
+    },
+    "/api/v1/storage/location": {
+      "put": {
+        "operationId": "change_location_api_v1_storage_location_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Location",
+        "tags": [
+          "storage"
+        ]
+      }
+    },
+    "/api/v1/storage/location/validate": {
+      "post": {
+        "operationId": "validate_location_api_v1_storage_location_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Location",
+        "tags": [
+          "storage"
+        ]
+      }
+    },
+    "/api/v1/storage/migration/abandon": {
+      "post": {
+        "operationId": "abandon_migration_api_v1_storage_migration_abandon_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Abandon Migration",
+        "tags": [
+          "storage"
+        ]
+      }
+    },
+    "/api/v1/storage/migration/resume": {
+      "post": {
+        "operationId": "resume_migration_api_v1_storage_migration_resume_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Resume Migration",
         "tags": [
           "storage"
         ]

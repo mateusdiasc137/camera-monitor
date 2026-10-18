@@ -20,6 +20,7 @@ from nvr.recordings.domain import (
     merge_intervals,
     parse_segment_filename,
 )
+from nvr.recordings.location import ActiveRecordDir
 from nvr.recordings.ports import (
     PlaybackServer,
     RecordingStream,
@@ -36,23 +37,28 @@ from nvr.streaming.ports import CameraStatusLog
 log = logging.getLogger(__name__)
 
 MAX_QUERY_RANGE = timedelta(days=31)
+ALIGN_MARGIN = timedelta(milliseconds=1)  # o índice guarda µs; o MediaMTX, ns
 LIVE_TAIL = timedelta(seconds=90)  # índice atualizado a cada ~30 s + 1 parte em escrita
 
 
 class EnsureStorageLocation:
-    """Garante um local de gravação ativo (até a F1-11b, o configurado em `recordings_dir`)."""
+    """Garante um local de gravação ativo: na primeira execução, `recordings_dir`; depois, o escolhido
+    pela UI (F1-11b). Mantém `record_dir` (usado no recordPath do MediaMTX) em dia com o banco."""
 
-    def __init__(self, locations: StorageLocations, default_path: Path) -> None:
-        self._locations, self._default = locations, default_path
+    def __init__(
+        self, locations: StorageLocations, default_path: Path, record_dir: ActiveRecordDir | None = None
+    ) -> None:
+        self._locations, self._default, self._record_dir = locations, default_path, record_dir
 
     async def __call__(self) -> StorageLocation:
-        active = await self._locations.active()
-        if active is not None:
-            return active
-        location = StorageLocation(str(uuid.uuid4()), self._default, active=True)
-        await asyncio.to_thread(self._default.mkdir, parents=True, exist_ok=True)
-        await self._locations.add(location)
-        log.info("local de gravação padrão criado: %s", self._default)
+        location = await self._locations.active()
+        if location is None:
+            location = StorageLocation(str(uuid.uuid4()), self._default, active=True)
+            await asyncio.to_thread(self._default.mkdir, parents=True, exist_ok=True)
+            await self._locations.add(location)
+            log.info("local de gravação padrão criado: %s", self._default)
+        if self._record_dir is not None:
+            self._record_dir.path = location.path
         return location
 
 
@@ -211,8 +217,25 @@ class RecordingClip:
 class OpenRecording:
     """Abre um trecho gravado no servidor de playback do MediaMTX (via backend, ADR-003)."""
 
-    def __init__(self, cameras: CameraRepository, playback: PlaybackServer) -> None:
-        self._cameras, self._playback = cameras, playback
+    def __init__(
+        self, cameras: CameraRepository, playback: PlaybackServer, index: SegmentIndex | None = None
+    ) -> None:
+        self._cameras, self._playback, self._index = cameras, playback, index
+
+    async def _align(self, camera_id: str, start: datetime, duration_s: float) -> tuple[datetime, float]:
+        """Início num buraco curto (o gravador reiniciou e esperou o próximo quadro-chave: troca de local,
+        câmera que reconectou...): o MediaMTX responde 404. Avança até o próximo segmento, mantendo o fim."""
+        if self._index is None:
+            return start, duration_s
+        end = start + timedelta(seconds=duration_s)
+        segments = await self._index.in_range(camera_id, start, end)
+        if any(s.start_at <= start < s.end_at for s in segments):
+            return start, duration_s
+        following = [s.start_at for s in segments if s.start_at > start]
+        if not following:
+            return start, duration_s
+        aligned = min(following) + ALIGN_MARGIN
+        return aligned, (end - aligned).total_seconds()
 
     async def __call__(self, camera_id: str, start: datetime, duration_s: float, fmt: str) -> RecordingClip:
         if start.tzinfo is None:
@@ -224,5 +247,8 @@ class OpenRecording:
         camera = await self._cameras.get(camera_id)
         if camera is None:
             raise NotFound("câmera não encontrada")
+        start, duration_s = await self._align(camera.id, start, duration_s)
+        if duration_s <= 0:
+            raise NotFound("não há gravação nesse trecho")
         stream = await self._playback.open(path_name(camera.id, StreamProfile.MAIN), start, duration_s, fmt)
         return RecordingClip(stream, camera.name, start, duration_s, fmt)

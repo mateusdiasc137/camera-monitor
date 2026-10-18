@@ -28,10 +28,24 @@ from nvr.identity.adapters.sql_repositories import SqlSessionRepository, SqlUser
 from nvr.identity.application import Authenticate, CreateUser, Login, Logout
 from nvr.persistence.database import create_engine
 from nvr.recordings.adapters.fs_store import FileSegmentStore, ShutilDiskProbe
+from nvr.recordings.adapters.local_fs import LocalStorageFilesystem
 from nvr.recordings.adapters.mediamtx_playback import MediaMtxPlayback
-from nvr.recordings.adapters.sql_repositories import SqlSegmentIndex, SqlStorageLocations, SqlStoragePolicies
+from nvr.recordings.adapters.sql_repositories import (
+    SqlSegmentIndex,
+    SqlStorageLocations,
+    SqlStorageMigrations,
+    SqlStoragePolicies,
+)
 from nvr.recordings.application import EnsureStorageLocation, IndexSegments, ListRecordings, OpenRecording
-from nvr.recordings.domain import RECORD_FILENAME_TEMPLATE
+from nvr.recordings.location import (
+    ActiveRecordDir,
+    BrowseStorage,
+    ChangeStorageLocation,
+    GetStorageMigration,
+    MigrationRunner,
+    ResolveStorageMigration,
+    ValidateStorageLocation,
+)
 from nvr.recordings.storage import (
     EnforceStoragePolicy,
     GetStorageOverview,
@@ -91,10 +105,18 @@ class Container:
     get_storage_overview: GetStorageOverview
     update_storage_policy: UpdateStoragePolicy
     recording_gate: RecordingGate
+    record_dir: ActiveRecordDir
+    browse_storage: BrowseStorage
+    validate_storage_location: ValidateStorageLocation
+    change_storage_location: ChangeStorageLocation
+    get_storage_migration: GetStorageMigration
+    resolve_storage_migration: ResolveStorageMigration
+    migration_runner: MigrationRunner
     playback: MediaMtxPlayback
     whep: MediaMtxWhep
 
     async def aclose(self) -> None:
+        await self.migration_runner.stop()
         await self.relays.stop_all()
         await self.media_api.aclose()
         await self.whep.aclose()
@@ -135,8 +157,7 @@ def build_container(
     )
     event_bus = EventBus()
     recordings_dir = settings.resolved_recordings_dir()
-    # %z no nome: início sem ambiguidade de fuso/horário de verão (o MediaMTX entende ao reproduzir).
-    record_path = f"{recordings_dir.as_posix()}/%path/{RECORD_FILENAME_TEMPLATE}"
+    record_dir = ActiveRecordDir(recordings_dir)  # atualizado com o local ativo do banco ao iniciar
     locations = SqlStorageLocations(engine, clock)
     playback = MediaMtxPlayback(
         settings.mediamtx_playback_url, AuthorizeMediaAccess.READER_USER, reader_secret
@@ -150,6 +171,13 @@ def build_container(
         locations, policies, segment_store, segment_index, disk, gate, audit, clock, cameras
     )
     status_log = SqlCameraStatusLog(engine)
+    roots = settings.resolved_storage_roots()
+    storage_fs = LocalStorageFilesystem()
+    migrations = SqlStorageMigrations(engine)
+    runner = MigrationRunner(locations, migrations, segment_store, segment_index, event_bus, audit, clock)
+    validate_location = ValidateStorageLocation(
+        roots, storage_fs, locations, migrations, segment_store, disk, policies
+    )
     return Container(
         settings=settings,
         engine=engine,
@@ -166,18 +194,38 @@ def build_container(
         update_camera=UpdateCamera(*camera_deps),
         delete_camera=DeleteCamera(*camera_deps),
         test_camera_connection=TestCameraConnection(*camera_deps, probe=probe or RtspDescribeProbe()),
-        reconcile_media=ReconcileMedia(cameras, secrets, media_api, relays, record_path, gate),
-        ensure_storage_location=EnsureStorageLocation(locations, recordings_dir),
+        reconcile_media=ReconcileMedia(cameras, secrets, media_api, relays, record_dir.record_path, gate),
+        ensure_storage_location=EnsureStorageLocation(locations, recordings_dir, record_dir),
         index_segments=IndexSegments(locations, segment_index, segment_store, cameras),
         list_recordings=ListRecordings(cameras, segment_index, status_log, clock),
         segment_index=segment_index,
-        open_recording=OpenRecording(cameras, playback),
+        open_recording=OpenRecording(cameras, playback, segment_index),
         enforce_storage_policy=enforcer,
         get_storage_overview=GetStorageOverview(
             locations, policies, segment_store, segment_index, disk, cameras, enforcer, gate, clock
         ),
         update_storage_policy=UpdateStoragePolicy(locations, policies, segment_store, disk, audit),
         recording_gate=gate,
+        record_dir=record_dir,
+        browse_storage=BrowseStorage(roots, storage_fs),
+        validate_storage_location=validate_location,
+        change_storage_location=ChangeStorageLocation(
+            validate_location,
+            storage_fs,
+            locations,
+            migrations,
+            segment_store,
+            segment_index,
+            runner,
+            record_dir,
+            audit,
+            clock,
+        ),
+        get_storage_migration=GetStorageMigration(locations, migrations),
+        resolve_storage_migration=ResolveStorageMigration(
+            locations, migrations, segment_index, runner, audit, clock
+        ),
+        migration_runner=runner,
         playback=playback,
         monitor_camera_health=MonitorCameraHealth(cameras, media_api, relays, status_log, event_bus, clock),
         get_camera_status_history=GetCameraStatusHistory(status_log),

@@ -112,4 +112,18 @@ describe('RecordingsPage', () => {
     const src = new URL(screen.getByLabelText('Gravação de Quintal').getAttribute('src')!, 'http://x')
     expect(new Date(src.searchParams.get('start')!).getTime()).toBe(at(12).getTime())
   })
+
+  it('se o trecho acaba antes (buraco curto no servidor), continua de onde parou', async () => {
+    renderPage()
+    await screen.findByText('1 h 30 min gravados neste dia')
+    fireEvent.click(screen.getByRole('slider', { name: 'Linha do tempo das gravações' }), { clientX: 504.17 }) // ~12:06
+    const video = await screen.findByLabelText('Gravação de Quintal')
+    const first = new Date(new URL(video.getAttribute('src')!, 'http://x').searchParams.get('start')!)
+
+    Object.defineProperty(video, 'currentTime', { value: 100, configurable: true })
+    fireEvent.ended(video)
+    const next = await screen.findByLabelText('Gravação de Quintal')
+    const start = new Date(new URL(next.getAttribute('src')!, 'http://x').searchParams.get('start')!)
+    expect(start.getTime()).toBe(first.getTime() + 100_500) // e não o fim planejado (12:30)
+  })
 })

@@ -155,6 +155,8 @@ button.secondary {
   gap: 4px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--border);
+  overflow-x: auto; /* no celular, as abas rolam dentro da barra, não a página */
+  scrollbar-width: none;
 }
 
 .tab {
@@ -164,6 +166,8 @@ button.secondary {
   border-bottom: 2px solid transparent;
   border-radius: 0;
   padding: 8px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tab--active {
@@ -691,4 +695,92 @@ button.danger-solid {
 
 .storage .card p {
   margin: 0;
+}
+
+/* Local de gravação (F1-11b) */
+.location-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.picker-path {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.picker-path strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.picker-path button {
+  flex-shrink: 0;
+}
+
+.folder-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.folder-list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.folder-list li.muted {
+  padding: 8px 10px;
+}
+
+button.folder {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  border-radius: 0;
+  padding: 8px 10px;
+}
+
+button.folder::before {
+  content: '📁 ';
+}
+
+button.folder:hover {
+  background: var(--bg);
+}
+
+.picker-actions label {
+  flex: 1 1 180px;
+}
+
+.location-check code,
+.location code,
+.migration code {
+  overflow-wrap: anywhere;
+}
+
+.check-list {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+
+.check-list--error {
+  color: var(--down);
+}
+
+.check-list--warning {
+  color: var(--degraded);
+}
+
+.migration {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }

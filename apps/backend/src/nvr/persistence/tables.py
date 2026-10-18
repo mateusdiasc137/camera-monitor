@@ -131,6 +131,24 @@ storage_policy = Table(
     ),
 )
 
+storage_migrations = Table(
+    "storage_migrations",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("from_location_id", String(36), ForeignKey("storage_locations.id"), nullable=False),
+    Column("to_location_id", String(36), ForeignKey("storage_locations.id"), nullable=False),
+    Column("state", String(16), nullable=False),
+    Column("total_files", Integer, nullable=False),
+    Column("total_bytes", BigInteger, nullable=False),
+    Column("moved_files", Integer, nullable=False),
+    Column("moved_bytes", BigInteger, nullable=False),
+    Column("error", String(1024), nullable=False),
+    Column("started_at", UTCDateTime, nullable=False),
+    Column("finished_at", UTCDateTime, nullable=True),
+    CheckConstraint("state in ('running', 'done', 'failed', 'abandoned')", name="state"),
+)
+Index("ix_storage_migrations_started_at", storage_migrations.c.started_at)
+
 segments = Table(
     "segments",
     metadata,

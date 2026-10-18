@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
-from nvr.recordings.domain import DiskUsage, Segment, StoragePolicy
+from nvr.recordings.domain import DiskUsage, Segment, StorageMigration, StoragePolicy
 
 
 @dataclass(frozen=True)
@@ -33,6 +33,12 @@ class ProbedSegment:
 class StorageLocations(Protocol):
     async def active(self) -> StorageLocation | None: ...
     async def add(self, location: StorageLocation) -> None: ...
+    async def get(self, location_id: str) -> StorageLocation | None: ...
+    async def by_path(self, path: Path) -> StorageLocation | None: ...
+
+    async def activate(self, location_id: str) -> None:
+        """Torna este o único local ativo (atômico)."""
+        ...
 
 
 class SegmentIndex(Protocol):
@@ -42,6 +48,15 @@ class SegmentIndex(Protocol):
 
     async def upsert(self, segments: list[Segment]) -> None: ...
     async def remove(self, location_id: str, rel_paths: list[str]) -> None: ...
+
+    async def remove_location(self, location_id: str) -> int:
+        """Tira do índice tudo o que está no local (os arquivos ficam). Devolve quantos saíram."""
+        ...
+
+    async def relocate(self, from_location_id: str, to_location_id: str, rel_path: str) -> None:
+        """O arquivo mudou de local (mesmo caminho relativo). Idempotente; não duplica."""
+        ...
+
     async def in_range(self, camera_id: str, start: datetime, end: datetime) -> list[Segment]: ...
 
 
@@ -56,6 +71,15 @@ class SegmentStore(Protocol):
 
     def delete(self, root: Path, rel_path: str) -> None:
         """Apaga um segmento (só dentro da raiz, só arquivos de gravação). Ausente = já apagado."""
+        ...
+
+    def move(self, src_root: Path, dst_root: Path, rel_path: str) -> None:
+        """Move um segmento para outro local, mesmo caminho relativo. Seguro para retomar:
+        nunca apaga a origem antes de o destino estar completo."""
+        ...
+
+    def remove_empty_folders(self, root: Path) -> None:
+        """Remove as pastas de câmera vazias (só subpastas de primeiro nível, nunca a raiz)."""
         ...
 
 
@@ -79,3 +103,46 @@ class StoragePolicies(Protocol):
 
 class DiskProbe(Protocol):
     def usage(self, path: Path) -> DiskUsage: ...
+
+
+@dataclass(frozen=True)
+class FolderEntry:
+    name: str
+    path: Path  # resolvido
+
+
+@dataclass(frozen=True)
+class FolderCheck:
+    """O que o sistema de arquivos diz sobre um candidato a local de gravação."""
+
+    path: Path  # resolvido (links seguidos)
+    exists: bool
+    is_dir: bool
+    creatable: bool  # não existe, mas o pai existe e aceita escrita
+    writable: bool  # escrita real testada (arquivo temporário criado, gravado e apagado)
+    write_error: str
+    foreign_entries: int  # itens que não são pastas de câmera do NVR
+    system_volume: bool  # mesma partição do sistema operacional
+
+
+class StorageFilesystem(Protocol):
+    """Navegação e verificação de pastas para escolher o local de gravação."""
+
+    def resolve(self, path: str) -> Path:
+        """Caminho absoluto normalizado, com links seguidos. ValueError se não for absoluto."""
+        ...
+
+    def subfolders(self, path: Path) -> list[FolderEntry]: ...
+    def check(self, path: Path) -> FolderCheck: ...
+    def same_volume(self, a: Path, b: Path) -> bool: ...
+    def make_dir(self, path: Path) -> None: ...
+
+    def permission_hint(self, path: Path) -> str:
+        """Comando sugerido para dar permissão de escrita ao serviço."""
+        ...
+
+
+class StorageMigrations(Protocol):
+    async def latest(self) -> StorageMigration | None: ...
+    async def add(self, migration: StorageMigration) -> None: ...
+    async def save(self, migration: StorageMigration) -> None: ...

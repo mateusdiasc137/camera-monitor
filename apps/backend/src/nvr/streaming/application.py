@@ -60,12 +60,13 @@ class ReconcileMedia:
         secrets: SecretStore,
         media: MediaServer,
         relays: RelaySupervisor,
-        record_path: str,
+        record_path: str | Callable[[], str],
         recording_allowed: Callable[[], bool] | None = None,
     ) -> None:
-        """`record_path`: recordPath completo do MediaMTX (local de gravação + padrão de nome)."""
+        """`record_path`: recordPath completo do MediaMTX (local de gravação + padrão de nome), ou função
+        que o devolve — o local pode mudar pela UI e a próxima reconciliação aplica (F1-11b)."""
         self._cameras, self._secrets, self._media, self._relays = cameras, secrets, media, relays
-        self._record_template = record_path
+        self._record_path: Callable[[], str] = record_path if callable(record_path) else (lambda: record_path)
         # Trava global (armazenamento cheio com a política "parar quando encher").
         self._recording_allowed = recording_allowed or (lambda: True)
         self._lock = asyncio.Lock()
@@ -81,6 +82,7 @@ class ReconcileMedia:
         report = ReconcileReport()
         desired_paths: dict[str, PathSpec] = {}
         desired_relays: dict[str, RelaySpec] = {}
+        record_path = self._record_path()
 
         for camera in await self._cameras.list():
             if not camera.enabled:
@@ -94,7 +96,7 @@ class ReconcileMedia:
                 record = (
                     profile is StreamProfile.MAIN and camera.recording_enabled and self._recording_allowed()
                 )
-                desired_paths[name] = PathSpec(name, record, self._record_template)
+                desired_paths[name] = PathSpec(name, record, record_path)
                 desired_relays[name] = RelaySpec(name, rtsp_url(camera, profile, credentials))
 
         # Defesa em profundidade: nunca alterar paths fora do padrão gerenciado,

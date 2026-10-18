@@ -22,6 +22,13 @@ from nvr.http.routers import auth, cameras, internal, live, recordings, status, 
 from nvr.http.security import SameOriginMiddleware, current_user
 from nvr.identity.application import Authenticate, Login, Logout
 from nvr.recordings.application import ListRecordings, OpenRecording
+from nvr.recordings.location import (
+    BrowseStorage,
+    ChangeStorageLocation,
+    GetStorageMigration,
+    ResolveStorageMigration,
+    ValidateStorageLocation,
+)
 from nvr.recordings.storage import GetStorageOverview, UpdateStoragePolicy
 from nvr.shared import errors
 from nvr.shared.events import EventBus
@@ -87,6 +94,16 @@ class UseCases(Protocol):
     def get_storage_overview(self) -> GetStorageOverview: ...
     @property
     def update_storage_policy(self) -> UpdateStoragePolicy: ...
+    @property
+    def browse_storage(self) -> BrowseStorage: ...
+    @property
+    def validate_storage_location(self) -> ValidateStorageLocation: ...
+    @property
+    def change_storage_location(self) -> ChangeStorageLocation: ...
+    @property
+    def get_storage_migration(self) -> GetStorageMigration: ...
+    @property
+    def resolve_storage_migration(self) -> ResolveStorageMigration: ...
 
 
 def create_app(

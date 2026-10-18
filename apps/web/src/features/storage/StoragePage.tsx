@@ -1,22 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { api, ApiError, apiError, type Storage, type StoragePolicyIn } from '../../api/client'
+import { formatBytes } from './format'
+import { LocationCard } from './LocationPanel'
 
 const STORAGE = ['storage'] as const
 const GB = 1024 ** 3
 
-export function formatBytes(bytes: number): string {
-  const fmt = (v: number, digits: number) =>
-    v.toLocaleString('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits })
-  if (bytes >= GB) return `${fmt(bytes / GB, bytes >= 100 * GB ? 0 : 1)} GB`
-  if (bytes >= 1024 ** 2) return `${fmt(bytes / 1024 ** 2, 0)} MB`
-  return `${fmt(bytes / 1024, 0)} KB`
-}
-
 function useStorage() {
   return useQuery({
     queryKey: STORAGE,
-    refetchInterval: 30_000,
+    // Migração em andamento: o SSE traz o progresso; a consulta periódica é só a rede de segurança.
+    refetchInterval: (query) => (query.state.data?.migration?.state === 'running' ? 5_000 : 30_000),
     queryFn: async (): Promise<Storage> => {
       const { data, error, response } = await api.GET('/api/v1/storage')
       if (error || !data) throw apiError(response, error, 'Não foi possível consultar o armazenamento')
@@ -185,10 +180,8 @@ export function StoragePage({ isAdmin }: { isAdmin: boolean }) {
           mais antigas.
         </p>
       )}
+      <LocationCard storage={s} isAdmin={isAdmin} />
       <div className="card">
-        <p className="muted">
-          Local das gravações: <code>{s.location_path}</code>
-        </p>
         <UsageBar storage={s} />
         {s.last_cleanup && s.last_cleanup.deleted_files > 0 && (
           <p className="muted">

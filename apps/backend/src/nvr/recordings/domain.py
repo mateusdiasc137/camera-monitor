@@ -10,6 +10,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta, timezone
 from enum import StrEnum
+from pathlib import PurePath
 from zoneinfo import ZoneInfo
 
 # Arquivos: <raiz>/cam-<id>-main/<AAAA-MM-DD_HH-MM-SS-ffffff>[<±HHMM|Z>].mp4 (recordPath com %z)
@@ -293,3 +294,57 @@ def should_resume_recording(policy: StoragePolicy, used_bytes: int, disk: DiskUs
     """Política "parar quando encher": só volta a gravar abaixo do limite inferior (histerese)."""
     below_quota = policy.quota_bytes is None or used_bytes <= policy.quota_bytes * policy.low_watermark
     return below_quota and disk.free_bytes >= policy.min_free_bytes * 1.25
+
+
+# ------------------------------------------------------------- local de gravação (D7)
+
+
+class LocationMode(StrEnum):
+    MIGRATE = "migrate"  # move as gravações existentes para o novo local
+    FRESH = "fresh"  # começa vazio: as antigas ficam na pasta anterior, fora do índice e da cota
+
+
+class MigrationState(StrEnum):
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"  # parou com erro: retomar ou abandonar
+    ABANDONED = "abandoned"  # o que faltava ficou no local antigo, fora do índice
+
+
+@dataclass(frozen=True)
+class StorageMigration:
+    id: str
+    from_location_id: str
+    to_location_id: str
+    state: MigrationState
+    total_files: int
+    total_bytes: int
+    moved_files: int
+    moved_bytes: int
+    error: str
+    started_at: datetime
+    finished_at: datetime | None
+
+
+def path_within(path: PurePath, roots: Iterable[PurePath]) -> bool:
+    """`path` é uma das raízes ou está dentro de uma delas. Caminhos já resolvidos (sem links, sem '..')."""
+    return any(path == root or path.is_relative_to(root) for root in roots)
+
+
+def overlapping(a: PurePath, b: PurePath) -> bool:
+    """Um local dentro do outro (ou o mesmo): a varredura de um enxergaria as pastas do outro."""
+    return a == b or a.is_relative_to(b) or b.is_relative_to(a)
+
+
+# `%` inicia variáveis no recordPath do MediaMTX; controle/aspas quebrariam a configuração.
+_FORBIDDEN_IN_RECORD_DIR = re.compile(r"[%\x00-\x1f\"]")
+
+
+def record_dir_problem(path: str) -> str | None:
+    """Motivo pelo qual a pasta não pode ir para o `recordPath` do MediaMTX, ou None."""
+    found = _FORBIDDEN_IN_RECORD_DIR.search(path)
+    if found is None:
+        return None
+    char = found.group()
+    shown = "%" if char == "%" else "aspas" if char == '"' else "caractere de controle"
+    return f"o caminho não pode conter {shown} (o servidor de mídia não aceita)"

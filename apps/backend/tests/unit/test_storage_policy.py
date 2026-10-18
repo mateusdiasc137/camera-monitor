@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from pathlib import PurePosixPath
 
 import pytest
 
@@ -9,8 +10,11 @@ from nvr.recordings.domain import (
     StoragePolicy,
     StorageState,
     StoredFile,
+    overlapping,
+    path_within,
     plan_cleanup,
     protected_files,
+    record_dir_problem,
     should_resume_recording,
 )
 
@@ -94,3 +98,45 @@ def test_orphan_folder_newest_file_is_deletable() -> None:
     stored = files("cam-removida", 2) + files("cam-ativa", 2, start_h=10)
     keep = protected_files(stored, NOW, active_folders={"cam-ativa"})
     assert keep == {"cam-ativa/s011.mp4"}
+
+
+# ---------------------------------------------------------------- local de gravação (F1-11b)
+
+
+@pytest.mark.parametrize(
+    ("path", "inside"),
+    [
+        ("/srv/nvr", True),
+        ("/srv/nvr/hd1/gravacoes", True),
+        ("/srv/nvr2", False),  # prefixo de texto não é "dentro"
+        ("/srv", False),
+        ("/mnt/hd1", True),
+        ("/etc", False),
+    ],
+)
+def test_path_within_roots(path: str, inside: bool) -> None:
+    roots = [PurePosixPath("/srv/nvr"), PurePosixPath("/mnt/hd1")]
+    assert path_within(PurePosixPath(path), roots) is inside
+
+
+def test_overlapping_locations() -> None:
+    a = PurePosixPath("/srv/nvr/a")
+    assert overlapping(a, a)
+    assert overlapping(a, a / "sub")
+    assert overlapping(a / "sub", a)
+    assert not overlapping(a, PurePosixPath("/srv/nvr/ab"))
+
+
+@pytest.mark.parametrize(
+    ("path", "problem"),
+    [
+        ("/srv/nvr/gravações 2026", None),
+        ("D:/Câmeras/NVR", None),
+        ("/srv/nvr/100%", "%"),
+        ('/srv/nvr/"x"', "aspas"),
+        ("/srv/nvr/a\nb", "controle"),
+    ],
+)
+def test_record_dir_problem(path: str, problem: str | None) -> None:
+    found = record_dir_problem(path)
+    assert (found is None) if problem is None else (found is not None and problem in found)

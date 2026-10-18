@@ -1,6 +1,6 @@
 # ADR-006 — Gravação, índice e política de armazenamento
 
-**Estado:** aceito · **Data:** 17/10/2026 · **Revisão (F1-09):** índice por varredura; nome com fuso · **(F1-11):** cota implementada
+**Estado:** aceito · **Data:** 17/10/2026 · **Revisão (F1-09):** índice por varredura; nome com fuso · **(F1-11):** cota implementada · **(F1-11b):** local pela UI
 
 ## Contexto
 
@@ -30,6 +30,16 @@ Requisitos do usuário: ligar/desligar a gravação por câmera, escolher o loca
 - **Reprodução e download (F1-10):** pelo backend (`GET /api/v1/recordings/{id}/video`), que repassa ao servidor de playback do MediaMTX (`/get`, só loopback) com a credencial `reader` — mesmo modelo do ao vivo (ADR-003). `fmp4` progressivo para assistir, `mp4` para baixar; até 2 h por pedido; sem `Range` (o MediaMTX gera o trecho na hora), então "pular" = pedir outro início.
 - **Áudio gravado (decidido na F1-10): sem transcodificação.** O G.711 vira LPCM (`pcm_s16be`) no fMP4. Ensaio no Chrome real (Playwright) com gravação da X6C-WEQ: o `<video>` toca e **decodifica o áudio LPCM** (o `canPlayType("ipcm")` responde vazio, mas a reprodução real funciona). Mantido sem recodificar.
 - **Navegadores:** Chrome (Windows) decodifica H.265 em WebRTC e no `<video>`. O Edge desta máquina **não** (no Windows depende da extensão "HEVC Video Extensions"): a interface já avisa quando o navegador não informa suporte a H.265.
+
+- **Local de gravação pela UI (F1-11b, D7 do plano):**
+  - Navegação só dentro das raízes de `NVR_STORAGE_ROOTS` (JSON; padrão: só a pasta inicial), com caminhos resolvidos (`..` normalizado, links seguidos) antes de conferir; links que apontam para fora não aparecem nem podem ser escolhidos. Só admin.
+  - Validação: pasta existe ou pode ser criada, **escrita real** pelo backend (arquivo temporário com `fsync`), um local não pode conter o outro, sem `%`/aspas/controle no caminho (o `recordPath` do MediaMTX usa `%` para variáveis), aviso se estiver no disco do sistema (mesmo `st_dev` de `/`; no Windows, a unidade do sistema), aviso se a cota não couber e se a pasta já tiver outros arquivos. Sem permissão: a mensagem traz o comando (`chown`/`icacls`).
+  - **A troca é a quente:** o próximo ciclo de reconciliação faz `replace` do path no MediaMTX com o novo `recordPath`. Medido no MediaMTX v1.21.2: o publicador (relay) não cai, o segmento aberto fecha na hora e o novo começa no novo local no próximo quadro-chave — buraco de até ~1 GOP no instante da troca.
+  - `migrate`: tarefa de fundo move os arquivos (os mais recentes primeiro): `rename` no mesmo disco; entre discos, cópia para `.part` + `fsync` + conferência de tamanho, e só então apaga a origem. Cada arquivo muda de local no índice na hora, sem duplicar mesmo se a varredura do novo local chegar antes. Arquivos mexidos há < 30 s esperam (podem estar abertos). Estado persistido (`storage_migrations`): retoma sozinha após reinício; se falhar, a UI oferece **retomar** ou **abandonar** (o resto fica no local antigo, fora do índice, nada é apagado) e bloqueia novas trocas até resolver. Progresso pelo SSE (`storage.migration`).
+  - `fresh`: os arquivos antigos ficam onde estão e saem do índice e da cota; se o local for reativado depois, a varredura os traz de volta.
+  - Diferenças em relação ao D7: o teste de escrita é feito só pelo backend — a escrita pelo serviço do MediaMTX fica garantida pelo grupo compartilhado da F1-19; trechos ainda não migrados aparecem normalmente na linha do tempo (a tela de armazenamento avisa que ficam indisponíveis até chegarem), sem marcação própria.
+- **Reprodução através de buracos curtos (corrigido na F1-11b):** a linha do tempo une buracos < 2 s, mas o servidor de playback do MediaMTX encerra o trecho no buraco e responde 404 a um início dentro dele. Agora o backend avança o início até o próximo segmento (pelo índice) e a interface continua de onde o vídeo parou de fato. Vale para qualquer reinício do gravador (troca de local, câmera que reconectou, pausa).
+- Ensaio com a X6C-WEQ (segmentos de 20 s): troca com "mover" durante a gravação → câmera seguiu online, MediaMTX gravando no novo local, 4/4 arquivos migrados, índice sem duplicatas, linha do tempo contínua, trecho anterior à troca tocando do novo local e reprodução continuando depois do buraco da troca; o mesmo fluxo pela interface no Chrome real, inclusive em largura de celular.
 
 ## Consequências
 

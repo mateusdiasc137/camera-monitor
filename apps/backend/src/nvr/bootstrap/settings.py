@@ -32,8 +32,9 @@ class Settings(BaseSettings):
         description="chave do cofre em arquivo (fora do data_dir); padrão: pasta de configuração do usuário",
     )
     storage_roots: list[Path] = Field(
-        default_factory=lambda: [Path("./data/recordings")],
-        description="raízes nas quais a UI pode escolher o local de gravação",
+        default_factory=list,
+        description='raízes (JSON, ex.: ["/srv/nvr", "/mnt/hd1"]) dentro das quais a UI pode escolher o '
+        "local de gravação; padrão: só a pasta de gravações inicial",
     )
 
     # --- mídia (ADR-002) ---
@@ -55,11 +56,16 @@ class Settings(BaseSettings):
     )
     recordings_dir: Path | None = Field(
         default=None,
-        description="pasta das gravações até a F1-11b (local pela UI); padrão: data_dir/recordings",
+        description="local de gravação da primeira execução (depois, vale o escolhido pela UI); "
+        "padrão: data_dir/recordings",
     )
 
     def resolved_recordings_dir(self) -> Path:
         return (self.recordings_dir or self.data_dir / "recordings").resolve()
+
+    def resolved_storage_roots(self) -> list[Path]:
+        roots = [r.resolve() for r in self.storage_roots] or [self.resolved_recordings_dir()]
+        return list(dict.fromkeys(roots))
 
     def resolved_secret_key_file(self) -> Path:
         if self.secret_key_file is not None:
