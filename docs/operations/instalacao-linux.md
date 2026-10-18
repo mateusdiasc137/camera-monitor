@@ -1,6 +1,6 @@
 # Instalação no servidor Linux (Ubuntu Server)
 
-O instalador `infra/linux/install.sh` deixa o NVR rodando como serviços do systemd, que sobem sozinhos com a máquina. Ele é testado a cada mudança no CI, numa máquina Ubuntu 24.04 de verdade: instala, grava uma câmera de teste, reinicia o servidor de vídeo, atualiza e desinstala.
+O instalador `infra/linux/install.sh` deixa o NVR rodando como serviços do systemd, que sobem sozinhos com a máquina. Ele traz o que precisa (Python 3.12, Node.js para compilar a interface, MediaMTX, Caddy, todos com versão e hash fixados) e, no final, pede a senha do primeiro usuário. É testado a cada mudança no CI, numa máquina Ubuntu 24.04 de verdade, do jeito que você vai usar: interativo, sem nada pré-instalado; depois grava uma câmera de teste, reinicia o servidor de vídeo, atualiza e desinstala.
 
 ## O que fica instalado
 
@@ -12,7 +12,7 @@ O instalador `infra/linux/install.sh` deixa o NVR rodando como serviços do syst
 
 | Caminho | Conteúdo |
 |---|---|
-| `/opt/nvr` | programas (backend, interface, MediaMTX, Caddy, uv, Python 3.12 próprio), só leitura para os serviços |
+| `/opt/nvr` | programas (backend, interface compilada, MediaMTX, Caddy, uv, Python 3.12 próprio), só leitura para os serviços |
 | `/etc/nvr` | configuração: `nvr.env`, `caddy.env`, `mediamtx.yml`, `Caddyfile`, `secrets.key` (chave do cofre, só do usuário `nvr`) |
 | `/var/lib/nvr` | banco, cofre de credenciais das câmeras (cifrado) |
 | `/var/lib/nvr-caddy` | CA local do HTTPS (faça backup) |
@@ -38,7 +38,8 @@ Cada serviço roda isolado pelo systemd: sistema de arquivos somente leitura (s�
    ```
    UUID=<uuid do disco>  /srv/nvr  ext4  defaults,nofail  0  2
    ```
-3. **Interface compilada**: o servidor não precisa de Node.js se você compilar em outra máquina (`npm ci && npm run build` em `apps/web`) e copiar a pasta `apps/web/dist` para o mesmo caminho no clone do servidor. Com Node.js no servidor, o instalador compila sozinho.
+3. **Acesso ao repositório**: ele é privado; no servidor, faça login no GitHub antes do `git clone` (por exemplo, `sudo apt install gh && gh auth login`).
+4. **Internet durante a instalação**: o instalador baixa pacotes do sistema, o Python, o Node.js e as dependências (todos conferidos por hash ou pelos arquivos de trava do projeto).
 
 ## Instalar
 
@@ -46,8 +47,9 @@ Cada serviço roda isolado pelo systemd: sistema de arquivos somente leitura (s�
 git clone https://github.com/mateusdiasc137/camera-monitor.git
 cd camera-monitor
 sudo infra/linux/install.sh --hostname nvr-camera-monitor --storage-root /srv/nvr --firewall auto
-sudo nvr-admin create-user admin          # primeiro usuário (pede a senha)
 ```
+
+O instalador pergunta se pode continuar e, no final, pede a senha do primeiro usuário (`admin`; outro nome com `--admin NOME`). Leva alguns minutos, a maior parte compilando a interface e baixando o Python.
 
 - `--hostname nvr-camera-monitor` faz o servidor responder em `nvr-camera-monitor.local` (Avahi).
 - `--firewall auto` ativa o ufw liberando só a sua rede local: SSH, 80/443, 8189/UDP e mDNS. Se você estiver conectado por SSH de fora dessa rede, o instalador para em vez de cortar seu acesso.
@@ -68,11 +70,10 @@ O verificador confere os serviços, os usuários, as portas, o HTTPS e as permis
 
 ```bash
 cd camera-monitor && git pull
-(cd apps/web && npm ci && npm run build)   # ou copie o dist compilado em outra máquina
 sudo infra/linux/install.sh --yes
 ```
 
-Configuração, banco, cofre, CA e gravações são mantidos. Se a instalação do backend falhar, a versão anterior volta.
+A interface é compilada de novo a partir do código (nunca fica uma versão antiga). Configuração, banco, cofre, CA, usuários e gravações são mantidos. Se a instalação do backend falhar, a versão anterior volta. Sem acesso ao registro do npm, compile em outra máquina, copie `apps/web/dist` e use `--skip-web-build`.
 
 ## Dia a dia
 

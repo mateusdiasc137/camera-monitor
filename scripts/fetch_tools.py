@@ -1,7 +1,9 @@
 """Baixa os binários de terceiros fixados em tools/manifest.json e confere o hash (SHA-256 ou SHA-512).
 
-Uso: python scripts/fetch_tools.py [--force]
-Resultado: tools/<nome>/<versão>/<binário>
+Uso: python scripts/fetch_tools.py [--force] [nome ...]
+  sem nomes: as ferramentas de uso geral (MediaMTX, Caddy); as marcadas "default": false (uv, Node.js,
+  usadas só pelo instalador do servidor) vêm apenas quando pedidas pelo nome.
+Resultado: tools/<nome>/<versão>/...
 """
 
 from __future__ import annotations
@@ -40,7 +42,9 @@ def digest_of(path: Path, algorithm: str = "sha256") -> str:
     return digest.hexdigest()
 
 
-def safe_extract(archive: Path, dest: Path) -> None:
+def safe_extract(archive: Path, dest: Path, skip_links: bool = False) -> None:
+    """Extrai sem sair de `dest`. Links: recusados, ou ignorados com `skip_links` (ex.: os atalhos
+    bin/npm do Node.js, que o instalador não usa: ele chama o npm direto pelo node)."""
     dest_resolved = dest.resolve()
 
     def check(name: str) -> None:
@@ -55,14 +59,18 @@ def safe_extract(archive: Path, dest: Path) -> None:
             zf.extractall(dest)
     else:
         with tarfile.open(archive) as tf:
+            members = []
             for member in tf.getmembers():
                 check(member.name)
                 if member.issym() or member.islnk():
+                    if skip_links:
+                        continue
                     raise SystemExit(f"Link não esperado no arquivo compactado: {member.name}")
+                members.append(member)
             try:
-                tf.extractall(dest, filter="data")
+                tf.extractall(dest, members=members, filter="data")
             except TypeError:  # Python 3.11.0-3.11.3 (Debian 12/MX): sem filtro; os nomes já foram conferidos
-                tf.extractall(dest)  # noqa: S202
+                tf.extractall(dest, members=members)  # noqa: S202
 
 
 def tool_dir(name: str) -> Path:
@@ -95,7 +103,7 @@ def fetch(name: str, spec: dict, force: bool) -> Path:
         if dest.exists():
             shutil.rmtree(dest)
         dest.mkdir(parents=True)
-        safe_extract(archive, dest)
+        safe_extract(archive, dest, skip_links=bool(spec.get("skip_links")))
     print(f"{name} {spec['version']}: instalado em {dest.relative_to(ROOT)}")
     return dest
 
@@ -103,10 +111,15 @@ def fetch(name: str, spec: dict, force: bool) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--force", action="store_true", help="baixa de novo mesmo se já existir")
+    parser.add_argument("names", nargs="*", help="ferramentas (padrão: as de uso geral)")
     args = parser.parse_args()
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    for name, spec in manifest.items():
-        fetch(name, spec, args.force)
+    unknown = set(args.names) - manifest.keys()
+    if unknown:
+        raise SystemExit(f"Ferramenta desconhecida: {', '.join(sorted(unknown))}")
+    names = args.names or [n for n, spec in manifest.items() if spec.get("default", True)]
+    for name in names:
+        fetch(name, manifest[name], args.force)
     return 0
 
 

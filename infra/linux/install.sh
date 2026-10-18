@@ -2,15 +2,17 @@
 # Instala ou atualiza o NVR Camera Monitor num servidor Linux com systemd e apt.
 # Alvo: Ubuntu Server LTS (24.04 ou mais novo). Serve também ao Debian 12 / MX Linux iniciado com systemd.
 #
-# Uso, num clone do repositório (com a interface compilada em apps/web/dist ou Node.js instalado):
+# Uso, num clone do repositório (não precisa de Node.js nem de Python 3.12: o instalador traz os seus):
 #   sudo infra/linux/install.sh [--storage-root DIR]... [--site-address NOME_OU_IP]...
-#                               [--hostname NOME] [--firewall CIDR|auto] [--yes]
+#                               [--hostname NOME] [--firewall CIDR|auto] [--admin NOME] [--yes]
 #
 #   --storage-root DIR    raiz em que a UI pode gravar (repetível; padrão /srv/nvr). Substitui a lista atual.
 #   --site-address X      nome ou IP extra no certificado HTTPS (repetível), ex.: nvr-camera-monitor.home.arpa
 #   --hostname NOME       renomeia a máquina; o Avahi publica NOME.local (ex.: nvr-camera-monitor)
 #   --firewall CIDR|auto  ativa o ufw liberando só a LAN: SSH, 80/443, 8189/udp (vídeo), 5353/udp (mDNS)
-#   --yes                 não pede confirmação
+#   --admin NOME          nome do primeiro usuário, criado no final se ainda não houver nenhum (padrão: admin)
+#   --skip-web-build      usa apps/web/dist já compilado em vez de compilar a interface aqui
+#   --yes                 não pergunta nada (nem cria o primeiro usuário: use depois sudo nvr-admin create-user)
 #
 # Rodar de novo atualiza o código e mantém configuração, banco, cofre, CA e gravações.
 set -euo pipefail
@@ -29,6 +31,8 @@ STORAGE_ROOTS=()
 SITE_ADDRESSES=()
 NEW_HOSTNAME=""
 FIREWALL=""
+ADMIN_USER="admin"
+BUILD_WEB=1
 ASSUME_YES=0
 
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
@@ -38,7 +42,7 @@ die() {
   exit 1
 }
 usage() {
-  sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
 
@@ -48,6 +52,8 @@ while [[ $# -gt 0 ]]; do
     --site-address) SITE_ADDRESSES+=("${2:?falta o nome ou IP}"); shift 2 ;;
     --hostname) NEW_HOSTNAME="${2:?falta o nome}"; shift 2 ;;
     --firewall) FIREWALL="${2:?falta a rede (ex.: 192.168.0.0/24 ou auto)}"; shift 2 ;;
+    --admin) ADMIN_USER="${2:?falta o nome}"; shift 2 ;;
+    --skip-web-build) BUILD_WEB=0; shift ;;
     --yes | -y) ASSUME_YES=1; shift ;;
     -h | --help) usage 0 ;;
     *) warn "opção desconhecida: $1"; usage 2 ;;
@@ -111,15 +117,6 @@ id nvr-caddy >/dev/null 2>&1 || useradd --system --user-group --home-dir "$CADDY
 
 # ------------------------------------------------------------------ binários e código
 
-WEB_DIST="$REPO/apps/web/dist"
-if [[ ! -f "$WEB_DIST/index.html" ]]; then
-  command -v npm >/dev/null || die "interface não compilada e npm ausente: rode 'npm ci && npm run build' em apps/web"
-  log "Compilando a interface"
-  (cd "$REPO/apps/web" && as_builder npm ci --no-audit --no-fund && as_builder npm run build)
-fi
-
-log "Ferramentas fixadas, com hash conferido: MediaMTX, Caddy, uv"
-as_builder python3 "$REPO/scripts/fetch_tools.py"
 manifest() { python3 - "$REPO/tools/manifest.json" "$@" <<'PY'
 import json, platform, sys
 spec = json.load(open(sys.argv[1]))[sys.argv[2]]
@@ -128,6 +125,27 @@ asset = spec["assets"][f"linux-{arch}"]
 print(spec["version"] if sys.argv[3] == "version" else asset.get("binary", sys.argv[2]))
 PY
 }
+
+log "Ferramentas fixadas, com hash conferido: MediaMTX, Caddy, uv$([[ $BUILD_WEB -eq 1 ]] && echo ", Node.js")"
+TOOLS=(mediamtx caddy uv)
+[[ $BUILD_WEB -eq 1 ]] && TOOLS+=(node)
+as_builder python3 "$REPO/scripts/fetch_tools.py" "${TOOLS[@]}"
+
+WEB_DIST="$REPO/apps/web/dist"
+if [[ $BUILD_WEB -eq 1 ]]; then
+  # Sempre a partir do código (um dist antigo depois de um git pull instalaria a interface errada).
+  # O npm vem do pacote do Node fixado e é chamado direto pelo node (os atalhos bin/npm não são extraídos).
+  log "Compilando a interface (Node.js $(manifest node version), dependências travadas no package-lock.json)"
+  NODE_BIN="$REPO/tools/node/$(manifest node version)/$(manifest node binary)"
+  NPM_CLI="$(dirname "$(dirname "$NODE_BIN")")/lib/node_modules/npm/bin/npm-cli.js"
+  (
+    cd "$REPO/apps/web"
+    BUILD_PATH="$(dirname "$NODE_BIN"):$PATH" # scripts do npm (tsc, vite) acham o node no PATH
+    as_builder env PATH="$BUILD_PATH" "$NODE_BIN" "$NPM_CLI" ci --no-audit --no-fund --loglevel=error
+    as_builder env PATH="$BUILD_PATH" "$NODE_BIN" "$NPM_CLI" run build --silent
+  ) || die "falha ao compilar a interface"
+fi
+[[ -f "$WEB_DIST/index.html" ]] || die "interface não encontrada em $WEB_DIST (rode sem --skip-web-build)"
 install -d -m 0755 "$PREFIX" "$PREFIX/tools"
 for tool in mediamtx caddy uv; do
   version="$(manifest "$tool" version)"
@@ -298,13 +316,27 @@ for _ in $(seq 60); do [[ -s "$CA_DIR/root.crt" ]] && break; sleep 1; done
 [[ -s "$CA_DIR/root.crt" ]] || die "a CA do HTTPS não foi criada; veja: journalctl -u nvr-caddy -n 100"
 FINGERPRINT="$(openssl x509 -noout -fingerprint -sha256 -in "$CA_DIR/root.crt" | cut -d= -f2)"
 
+USERS="$("$PREFIX/app/.venv/bin/python" -c 'import sqlite3, sys; print(sqlite3.connect(sys.argv[1]).execute("select count(*) from users").fetchone()[0])' "$STATE/nvr.db" 2>/dev/null || echo 0)"
+ADMIN_HINT="já existe(m) $USERS usuário(s)"
+if [[ "$USERS" == 0 ]]; then
+  ADMIN_HINT="sudo nvr-admin create-user $ADMIN_USER"
+  if [[ $ASSUME_YES -ne 1 && -t 0 ]]; then
+    log "Primeiro usuário do painel: $ADMIN_USER (administrador)"
+    if /usr/local/bin/nvr-admin create-user "$ADMIN_USER"; then
+      ADMIN_HINT="usuário $ADMIN_USER criado"
+    else
+      warn "usuário não criado; crie depois com: sudo nvr-admin create-user $ADMIN_USER"
+    fi
+  fi
+fi
+
 cat <<EOF
 
 NVR instalado e no ar.
   Endereço:        https://$HOST.local   (ou https://${IP:-<IP do servidor>})
   CA para baixar:  http://${IP:-<IP do servidor>}/nvr-ca.crt
   SHA-256 da CA:   $FINGERPRINT
-  Primeiro acesso: sudo nvr-admin create-user admin
+  Usuário:         $ADMIN_HINT
   Logs:            journalctl -u nvr-api -u nvr-mediamtx -u nvr-caddy -f
   Guias:           docs/operations/instalacao-linux.md e docs/operations/https-e-certificado.md
 EOF

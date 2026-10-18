@@ -113,18 +113,29 @@ jobs:
       NVR_VERIFY_PASSWORD: senha-de-teste-123
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: apps/web/package-lock.json
-      - name: interface compilada
-        working-directory: apps/web
-        run: npm ci && npm run build
-      - name: instalar (com firewall da LAN)
-        run: sudo infra/linux/install.sh --storage-root /srv/nvr --site-address nvr-camera-monitor.home.arpa --firewall auto --yes
-      - name: primeiro usuário (como no servidor de verdade)
-        run: printf '%s\n%s\n' "$NVR_VERIFY_PASSWORD" "$NVR_VERIFY_PASSWORD" | sudo nvr-admin create-user admin
+      # Sem Node.js nem interface pré-compilada: como no servidor de verdade, o instalador traz o seu Node
+      # fixado, compila a interface, pergunta se continua e pede a senha do primeiro usuário (via expect).
+      - name: instalar como o usuário faria (interativo, com firewall da LAN)
+        run: |
+          sudo apt-get install -y -q expect
+          expect -c '
+            set timeout 1500
+            proc step {pattern answer} {
+              expect {
+                $pattern { if {$answer ne ""} { send -- "$answer\r" } }
+                timeout { puts "\n*** tempo esgotado esperando: $pattern"; exit 1 }
+                eof { puts "\n*** o instalador terminou antes de: $pattern"; exit 1 }
+              }
+            }
+            spawn sudo infra/linux/install.sh --storage-root /srv/nvr --site-address nvr-camera-monitor.home.arpa --firewall auto
+            step "Continuar?" "s"
+            step "Senha:" $env(NVR_VERIFY_PASSWORD)
+            step "Repita a senha:" $env(NVR_VERIFY_PASSWORD)
+            step "usuário admin criado" ""
+            expect eof
+            lassign [wait] pid spawnid os_error status
+            exit $status
+          '
       - name: câmera falsa (RTSP local na porta 8654)
         run: |
           nohup python3 scripts/fake_camera.py > /tmp/fake-camera.log 2>&1 &
@@ -133,7 +144,9 @@ jobs:
         run: sudo --preserve-env=NVR_VERIFY_PASSWORD /opt/nvr/app/.venv/bin/python infra/linux/verify_install.py --user admin --password-env NVR_VERIFY_PASSWORD --camera 127.0.0.1:8654
       - name: atualizar (instalar de novo) mantém dados e configuração
         run: |
-          sudo infra/linux/install.sh --yes
+          set -o pipefail
+          sudo infra/linux/install.sh --yes --skip-web-build | tee /tmp/reinstall.log
+          grep -q "já existe(m) 1 usuário(s)" /tmp/reinstall.log  # não pede usuário de novo
           sudo --preserve-env=NVR_VERIFY_PASSWORD /opt/nvr/app/.venv/bin/python infra/linux/verify_install.py --user admin --password-env NVR_VERIFY_PASSWORD
       - name: firewall
         run: sudo ufw status verbose
