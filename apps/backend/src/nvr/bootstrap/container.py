@@ -27,6 +27,7 @@ from nvr.identity.adapters.memory_throttle import MemoryLoginThrottle
 from nvr.identity.adapters.sql_repositories import SqlSessionRepository, SqlUserRepository
 from nvr.identity.application import Authenticate, CreateUser, Login, Logout
 from nvr.persistence.database import create_engine
+from nvr.recordings.adapters.ffmpeg_export import FfmpegExportTools
 from nvr.recordings.adapters.fs_store import FileSegmentStore, ShutilDiskProbe
 from nvr.recordings.adapters.local_fs import LocalStorageFilesystem
 from nvr.recordings.adapters.mediamtx_playback import MediaMtxPlayback
@@ -37,6 +38,7 @@ from nvr.recordings.adapters.sql_repositories import (
     SqlStoragePolicies,
 )
 from nvr.recordings.application import EnsureStorageLocation, IndexSegments, ListRecordings, OpenRecording
+from nvr.recordings.export import ExportRecording
 from nvr.recordings.location import (
     ActiveRecordDir,
     BrowseStorage,
@@ -101,6 +103,7 @@ class Container:
     list_recordings: ListRecordings
     segment_index: SqlSegmentIndex
     open_recording: OpenRecording
+    export_recording: ExportRecording
     enforce_storage_policy: EnforceStoragePolicy
     get_storage_overview: GetStorageOverview
     update_storage_policy: UpdateStoragePolicy
@@ -200,6 +203,12 @@ def build_container(
         list_recordings=ListRecordings(cameras, segment_index, status_log, clock),
         segment_index=segment_index,
         open_recording=OpenRecording(cameras, playback, segment_index),
+        export_recording=ExportRecording(
+            cameras,
+            segment_index,
+            playback,
+            FfmpegExportTools(settings.ffmpeg_path, settings.data_dir / "exportacoes"),
+        ),
         enforce_storage_policy=enforcer,
         get_storage_overview=GetStorageOverview(
             locations, policies, segment_store, segment_index, disk, cameras, enforcer, gate, clock

@@ -155,7 +155,8 @@ def _fragment_end(moof: bytes, track_timescales: dict[int, int]) -> float:
     return best
 
 
-def read_fmp4(fh: BinaryIO, file_size: int) -> Fmp4Info:
+def _read_moov(fh: BinaryIO, file_size: int) -> bytes:
+    """Corpo do moov (logo após o ftyp, como o MediaMTX grava); o arquivo fica posicionado depois dele."""
     first = _header(fh, file_size)
     if first is None or first[0] != b"ftyp":
         raise Fmp4Error("não é um MP4 (ftyp ausente)")
@@ -170,6 +171,11 @@ def read_fmp4(fh: BinaryIO, file_size: int) -> Fmp4Info:
     moov = fh.read(moov_size - moov_hdr)
     if len(moov) < moov_size - moov_hdr:
         raise Fmp4Error("moov truncado")
+    return moov
+
+
+def read_fmp4(fh: BinaryIO, file_size: int) -> Fmp4Info:
+    moov = _read_moov(fh, file_size)
     movie_timescale, movie_duration, track_timescales, start_at = _parse_moov(moov)
 
     if movie_duration > 0 and movie_timescale > 0:
@@ -203,3 +209,31 @@ def read_fmp4(fh: BinaryIO, file_size: int) -> Fmp4Info:
 def probe_file(path: Path) -> Fmp4Info:
     with path.open("rb") as fh:
         return read_fmp4(fh, path.stat().st_size)
+
+
+# Entradas de amostra de vídeo (stsd) → codec, para o recorte sem recodificar.
+VIDEO_ENTRIES = {b"hvc1": "hevc", b"hev1": "hevc", b"avc1": "h264", b"avc3": "h264"}
+
+
+def read_video_geometry(fh: BinaryIO, file_size: int) -> tuple[str, int, int]:
+    """(codec, largura, altura) da primeira trilha de vídeo, pelo VisualSampleEntry do stsd."""
+    for kind, trak in _children(_read_moov(fh, file_size)):
+        if kind != b"trak":
+            continue
+        box: bytes | None = trak
+        for child in (b"mdia", b"minf", b"stbl", b"stsd"):
+            box = None if box is None else _find(_children(box), child)
+        if box is None or len(box) < 8:
+            continue
+        for entry, body in _children(box[8:]):  # FullBox(4) + entry_count(4)
+            codec = VIDEO_ENTRIES.get(entry)
+            if codec is not None and len(body) >= 28:
+                # SampleEntry(8) + pre_defined/reserved(16) → largura, altura (16 bits cada)
+                width, height = struct.unpack(">HH", body[24:28])
+                return codec, width, height
+    raise Fmp4Error("trilha de vídeo H.264/H.265 não encontrada")
+
+
+def probe_geometry(path: Path) -> tuple[str, int, int]:
+    with path.open("rb") as fh:
+        return read_video_geometry(fh, path.stat().st_size)

@@ -10,6 +10,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta, timezone
 from enum import StrEnum
+from itertools import pairwise
 from pathlib import PurePath
 from zoneinfo import ZoneInfo
 
@@ -348,3 +349,55 @@ def record_dir_problem(path: str) -> str | None:
     char = found.group()
     shown = "%" if char == "%" else "aspas" if char == '"' else "caractere de controle"
     return f"o caminho não pode conter {shown} (o servidor de mídia não aceita)"
+
+
+# ------------------------------------------------------------- exportação (download de trechos)
+
+# Buraco maior que isso entre segmentos: o servidor de playback do MediaMTX encerra o trecho ali.
+# Medido (v1.21.2): ~0,1 s entre segmentos normais é emendado; 0,6 s (gravador reiniciado) não.
+JOIN_GAP = timedelta(seconds=0.3)
+ALIGN_MARGIN = timedelta(milliseconds=1)  # o índice guarda µs; o MediaMTX, ns
+
+
+class Lens(StrEnum):
+    BOTH = "both"  # quadro inteiro (as duas lentes empilhadas, ou a única lente)
+    TOP = "top"
+    BOTTOM = "bottom"
+
+
+@dataclass(frozen=True)
+class Crop:
+    """Linhas cortadas em cima e embaixo (janela de exibição do H.264/H.265, sem recodificar)."""
+
+    top: int
+    bottom: int
+
+
+def lens_crop(lens: Lens, height: int) -> Crop | None:
+    """Recorte de uma lente num quadro com duas lentes empilhadas. Metade par (croma 4:2:0)."""
+    if lens is Lens.BOTH:
+        return None
+    half = (height // 4) * 2
+    return Crop(0, height - half) if lens is Lens.TOP else Crop(half, 0)
+
+
+def align_to_recording(
+    segments: Sequence[Segment], start: datetime, end: datetime
+) -> tuple[datetime, float] | None:
+    """Início dentro de um buraco (o MediaMTX responde 404): avança até o próximo segmento, mantendo o
+    fim. None se não houver gravação no intervalo."""
+    if any(s.start_at <= start < s.end_at for s in segments):
+        return start, (end - start).total_seconds()
+    following = [s.start_at for s in segments if start < s.start_at < end]
+    if not following:
+        return None
+    aligned = min(following) + ALIGN_MARGIN
+    return aligned, (end - aligned).total_seconds()
+
+
+def is_continuous(segments: Sequence[Segment], start: datetime, end: datetime) -> bool:
+    """O intervalo está gravado sem buracos que o MediaMTX não emende (um único pedido basta)."""
+    inside = sorted((s for s in segments if s.end_at > start and s.start_at < end), key=lambda s: s.start_at)
+    if not inside or inside[0].start_at - start > JOIN_GAP or end - inside[-1].end_at > JOIN_GAP:
+        return False
+    return all(b.start_at - a.end_at <= JOIN_GAP for a, b in pairwise(inside))

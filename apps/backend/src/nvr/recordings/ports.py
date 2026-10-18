@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
-from nvr.recordings.domain import DiskUsage, Segment, StorageMigration, StoragePolicy
+from nvr.recordings.domain import Crop, DiskUsage, Segment, StorageMigration, StoragePolicy
 
 
 @dataclass(frozen=True)
@@ -146,3 +146,38 @@ class StorageMigrations(Protocol):
     async def latest(self) -> StorageMigration | None: ...
     async def add(self, migration: StorageMigration) -> None: ...
     async def save(self, migration: StorageMigration) -> None: ...
+
+
+@dataclass(frozen=True)
+class VideoGeometry:
+    codec: str  # "hevc" | "h264"
+    width: int
+    height: int
+
+
+@dataclass(frozen=True)
+class SavedPiece:
+    path: Path
+    duration_s: float  # medida no arquivo (o servidor de playback para no primeiro buraco)
+
+
+class ExportWorkspace(Protocol):
+    """Pasta temporária de uma exportação. Apagada ao terminar de enviar o resultado (ou em erro)."""
+
+    async def save(self, stream: RecordingStream, name: str) -> SavedPiece: ...
+    def path(self, name: str) -> Path: ...
+
+    async def open_result(self, path: Path) -> RecordingStream:
+        """Fluxo do arquivo final (com `size`); apaga a pasta quando terminar ou for fechado."""
+        ...
+
+    async def discard(self) -> None: ...
+
+
+class ExportTools(Protocol):
+    def workspace(self) -> ExportWorkspace: ...
+    async def geometry(self, piece: Path) -> VideoGeometry: ...
+
+    async def mux(self, pieces: list[Path], out: Path, codec: str, crop: Crop | None) -> None:
+        """Junta as partes num MP4 comum (faststart), sem recodificar; recorta se pedido."""
+        ...

@@ -15,6 +15,7 @@ from nvr.recordings.domain import (
     RecordingInterval,
     Segment,
     StatusPoint,
+    align_to_recording,
     clip,
     find_gaps,
     merge_intervals,
@@ -37,7 +38,6 @@ from nvr.streaming.ports import CameraStatusLog
 log = logging.getLogger(__name__)
 
 MAX_QUERY_RANGE = timedelta(days=31)
-ALIGN_MARGIN = timedelta(milliseconds=1)  # o índice guarda µs; o MediaMTX, ns
 LIVE_TAIL = timedelta(seconds=90)  # índice atualizado a cada ~30 s + 1 parte em escrita
 
 
@@ -228,14 +228,8 @@ class OpenRecording:
         if self._index is None:
             return start, duration_s
         end = start + timedelta(seconds=duration_s)
-        segments = await self._index.in_range(camera_id, start, end)
-        if any(s.start_at <= start < s.end_at for s in segments):
-            return start, duration_s
-        following = [s.start_at for s in segments if s.start_at > start]
-        if not following:
-            return start, duration_s
-        aligned = min(following) + ALIGN_MARGIN
-        return aligned, (end - aligned).total_seconds()
+        aligned = align_to_recording(await self._index.in_range(camera_id, start, end), start, end)
+        return (start, duration_s) if aligned is None else aligned
 
     async def __call__(self, camera_id: str, start: datetime, duration_s: float, fmt: str) -> RecordingClip:
         if start.tzinfo is None:

@@ -15,6 +15,7 @@ from nvr.identity.domain import Role
 from nvr.persistence.database import migrate
 from nvr.recordings.application import OpenRecording
 from nvr.recordings.domain import Segment
+from nvr.recordings.export import ExportRecording
 from nvr.shared.errors import NotFound
 
 PASSWORD = "senha-forte-123"
@@ -46,13 +47,26 @@ class FakePlayback:
         return FakeStream()
 
 
+class CoveredIndex:
+    """Tudo gravado continuamente (exceto antes de 2000): o download vai direto ao servidor de playback."""
+
+    async def in_range(self, camera_id: str, start: datetime, end: datetime) -> list[Segment]:
+        if start.year < 2000:
+            return []
+        span = (end - start).total_seconds() + 2
+        return [Segment(camera_id, "l", "cam/x.mp4", start - timedelta(seconds=1), span, 1)]
+
+
 @pytest.fixture
 def env(tmp_path: Path) -> Iterator[dict]:  # type: ignore[type-arg]
     migrate(tmp_path)
     container = build_container(Settings(data_dir=tmp_path, cookie_secure=False))
     playback = FakePlayback()
+    cameras = container.open_recording._cameras
+    object.__setattr__(container, "open_recording", OpenRecording(cameras, playback))
+    tools = container.export_recording._tools
     object.__setattr__(
-        container, "open_recording", OpenRecording(container.open_recording._cameras, playback)
+        container, "export_recording", ExportRecording(cameras, CoveredIndex(), playback, tools)
     )
     asyncio.run(container.create_user("admin", PASSWORD, Role.ADMIN))
     with TestClient(build_app(container), base_url=ORIGIN, headers={"Origin": ORIGIN}) as client:
@@ -85,6 +99,18 @@ def test_download_has_safe_filename(env: dict) -> None:  # type: ignore[type-arg
     assert disposition.startswith('attachment; filename="camera-da-frente_2026-10-17_')
     assert disposition.endswith('.mp4"')
     assert env["playback"].calls[-1][3] == "mp4"
+
+
+def test_lens_is_only_for_downloads_of_two_lens_cameras(env: dict) -> None:  # type: ignore[type-arg]
+    client, cam = env["client"], env["camera"]
+    url = f"/api/v1/recordings/{cam['id']}/video"
+    base = {"start": "2026-10-17T21:04:57+00:00", "duration": 60}
+    playing = client.get(url, params=base | {"lens": "top"})
+    assert playing.status_code == 422
+    assert "lens" in playing.json()["fields"]
+    single = client.get(url, params=base | {"lens": "top", "download": "true"})
+    assert single.status_code == 422  # câmera de uma lente
+    assert client.get(url, params=base | {"lens": "lateral", "download": "true"}).status_code == 422
 
 
 @pytest.mark.parametrize(

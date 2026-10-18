@@ -3,12 +3,18 @@ from datetime import UTC, datetime, timedelta, timezone
 import pytest
 
 from nvr.recordings.domain import (
+    ALIGN_MARGIN,
+    Crop,
     Gap,
     GapReason,
+    Lens,
     RecordingInterval,
     Segment,
     StatusPoint,
+    align_to_recording,
     find_gaps,
+    is_continuous,
+    lens_crop,
     merge_intervals,
     parse_segment_filename,
 )
@@ -125,3 +131,42 @@ def test_no_history_means_unknown_and_tiny_gaps_are_ignored() -> None:
     assert find_gaps([], T0, T0 + timedelta(minutes=1)) == [
         Gap(T0, T0 + timedelta(minutes=1), GapReason.UNKNOWN)
     ]
+
+
+# ---------------------------------------------------------------- exportação
+
+
+@pytest.mark.parametrize(
+    ("lens", "height", "crop"),
+    [
+        (Lens.BOTH, 2592, None),
+        (Lens.TOP, 2592, Crop(0, 1296)),  # X6C-WEQ: 2304x2592 = duas lentes de 2304x1296
+        (Lens.BOTTOM, 2592, Crop(1296, 0)),
+        (Lens.TOP, 1082, Crop(0, 542)),  # metade ímpar: a de cima fica par (croma 4:2:0)
+        (Lens.BOTTOM, 1082, Crop(540, 0)),
+    ],
+)
+def test_lens_crop(lens: Lens, height: int, crop: Crop | None) -> None:
+    assert lens_crop(lens, height) == crop
+
+
+def test_align_to_recording_moves_start_out_of_a_gap() -> None:
+    segments = [seg(0, 60), seg(1.01, 60)]  # buraco de 0,6 s às 12:01:00
+    end = T0 + timedelta(minutes=2)
+    inside = T0 + timedelta(seconds=30)
+    assert align_to_recording(segments, inside, end) == (inside, 90.0)
+    in_gap = T0 + timedelta(seconds=60.2)
+    start, duration = align_to_recording(segments, in_gap, end)  # type: ignore[misc]
+    assert start == segments[1].start_at + ALIGN_MARGIN
+    assert duration == pytest.approx((end - start).total_seconds())
+    assert align_to_recording(segments, T0 + timedelta(minutes=5), T0 + timedelta(minutes=6)) is None
+
+
+def test_is_continuous_tolerates_only_tiny_gaps() -> None:
+    normal = [seg(0, 299.9), seg(5, 299.9), seg(10, 299.9)]  # 0,1 s entre segmentos: emendados
+    assert is_continuous(normal, T0 + timedelta(minutes=1), T0 + timedelta(minutes=12))
+    restarted = [seg(0, 59.4), seg(1, 60)]  # 0,6 s: o servidor de playback para aqui
+    assert not is_continuous(restarted, T0, T0 + timedelta(minutes=2))
+    assert not is_continuous(normal, T0 - timedelta(minutes=1), T0 + timedelta(minutes=2))  # começa antes
+    assert not is_continuous(normal, T0, T0 + timedelta(minutes=20))  # termina depois
+    assert not is_continuous([], T0, T0 + timedelta(minutes=1))

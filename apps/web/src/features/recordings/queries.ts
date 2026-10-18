@@ -39,7 +39,7 @@ export function clipUrl(
   cameraId: string,
   start: Date,
   durationS: number,
-  opts: { format?: 'fmp4' | 'mp4'; download?: boolean } = {},
+  opts: { format?: 'fmp4' | 'mp4'; download?: boolean; lens?: 'both' | 'top' | 'bottom' } = {},
 ): string {
   const params = new URLSearchParams({
     start: start.toISOString(),
@@ -47,6 +47,7 @@ export function clipUrl(
     format: opts.format ?? 'fmp4',
   })
   if (opts.download) params.set('download', 'true')
+  if (opts.lens && opts.lens !== 'both') params.set('lens', opts.lens)
   return `/api/v1/recordings/${encodeURIComponent(cameraId)}/video?${params}`
 }
 

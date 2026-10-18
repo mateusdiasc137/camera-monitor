@@ -37,6 +37,7 @@
 - [x] F1-10 linha do tempo de 24 h, reprodução (fmp4) e download (mp4) pelo backend; áudio LPCM toca no Chrome (sem transcodificar); ensaio de UI completo no Chrome real
 - [x] F1-11 cota de armazenamento e substituição dos mais antigos (ou parar de gravar); aba Armazenamento com uso por câmera e estimativa de dias; ensaio com a câmera real
 - [x] F1-11b local de gravação pela UI (navegação nas raízes permitidas, validação, troca a quente com migração retomável ou começo do zero); reprodução atravessa buracos curtos; ensaio com a câmera real
+- [x] Gravações: barra de corte com zoom abaixo do vídeo; download só do intervalo marcado (junta trechos com buracos) e por lente, sem recodificar
 - [ ] F1-12 saúde do sistema (observabilidade) (próximo)
 
 > Convenções: cada tarefa tem ID (`F1-07`), entregáveis, critério de "pronto" verificável e dependências.

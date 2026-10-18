@@ -1,6 +1,6 @@
 # ADR-006 — Gravação, índice e política de armazenamento
 
-**Estado:** aceito · **Data:** 17/10/2026 · **Revisão (F1-09):** índice por varredura; nome com fuso · **(F1-11):** cota implementada · **(F1-11b):** local pela UI
+**Estado:** aceito · **Data:** 17/10/2026 · **Revisão (F1-09):** índice por varredura; nome com fuso · **(F1-11):** cota implementada · **(F1-11b):** local pela UI · download por intervalo e lente
 
 ## Contexto
 
@@ -40,6 +40,12 @@ Requisitos do usuário: ligar/desligar a gravação por câmera, escolher o loca
   - Diferenças em relação ao D7: o teste de escrita é feito só pelo backend — a escrita pelo serviço do MediaMTX fica garantida pelo grupo compartilhado da F1-19; trechos ainda não migrados aparecem normalmente na linha do tempo (a tela de armazenamento avisa que ficam indisponíveis até chegarem), sem marcação própria.
 - **Reprodução através de buracos curtos (corrigido na F1-11b):** a linha do tempo une buracos < 2 s, mas o servidor de playback do MediaMTX encerra o trecho no buraco e responde 404 a um início dentro dele. Agora o backend avança o início até o próximo segmento (pelo índice) e a interface continua de onde o vídeo parou de fato. Vale para qualquer reinício do gravador (troca de local, câmera que reconectou, pausa).
 - Ensaio com a X6C-WEQ (segmentos de 20 s): troca com "mover" durante a gravação → câmera seguiu online, MediaMTX gravando no novo local, 4/4 arquivos migrados, índice sem duplicatas, linha do tempo contínua, trecho anterior à troca tocando do novo local e reprodução continuando depois do buraco da troca; o mesmo fluxo pela interface no Chrome real, inclusive em largura de celular.
+
+- **Download por intervalo e por lente (pedido do usuário, após a F1-11b):**
+  - Na aba Gravações, a barra fica logo abaixo do vídeo e funciona como a de um editor simples: duas alças (início/fim), área fora do corte escurecida, zoom por botões, pinça (celular) ou roda do mouse, arrastar para deslocar, tocar para assistir. Os horários do corte também podem ser digitados (HH:MM:SS) e marcados pelo ponto do vídeo. Saíram os botões "baixar 5/15/30 min".
+  - O download cobre exatamente o intervalo marcado (até 2 h). O servidor de playback do MediaMTX para no primeiro buraco; por isso, se houver buraco (queda, pausa) o backend busca cada parte contínua (pulando os buracos pelo índice) e junta tudo com o FFmpeg (`concat`, `-c copy`, `+faststart`) num MP4 comum, com tamanho informado ao navegador. Sem buracos e com o quadro inteiro, o MP4 vem direto do MediaMTX, como antes.
+  - **Lente superior/inferior sem recodificar:** a janela de exibição do H.265/H.264 é ajustada (`hevc_metadata`/`h264_metadata` `crop_top`/`crop_bottom`) — o arquivo guarda o quadro inteiro, mas Chrome, VLC e FFmpeg mostram só a lente (X6C-WEQ: 2304x2592 → 2304x1296), sem perda de qualidade e quase sem custo de CPU. As dimensões vêm do `stsd` do próprio fMP4 (leitura própria). Temporários em `data/exportacoes`, apagados ao terminar o envio (e sobras antigas na próxima exportação); no máximo 2 exportações simultâneas.
+  - Ensaio com a X6C-WEQ no Chrome real: corte de 23:04:53 a 23:06:21 atravessando uma pausa de 25 s → arquivo com só os ~63 s gravados, nas duas versões (inteiro 2304x2592 e lente inferior 2304x1296), com áudio.
 
 ## Consequências
 

@@ -224,9 +224,10 @@ export interface paths {
         };
         /**
          * Recording Video
-         * @description Reprodução (fmp4, progressivo) ou download (mp4) de um trecho.
+         * @description Reprodução (fmp4, progressivo) ou download (mp4 comum) de um trecho.
          *
-         *     Sem suporte a Range (o MediaMTX gera o trecho na hora): para pular, peça outro início.
+         *     O download cobre o intervalo inteiro, juntando os trechos gravados se houver buracos, e pode trazer
+         *     só uma lente (recorte sem recodificar). Sem suporte a Range: para pular, peça outro início.
          */
         get: operations["recording_video_api_v1_recordings__camera_id__video_get"];
         put?: never;
@@ -1362,6 +1363,8 @@ export interface operations {
                 duration: number;
                 format?: "fmp4" | "mp4";
                 download?: boolean;
+                /** @description download: quadro inteiro ou só a lente de cima/de baixo (câmeras de 2 lentes) */
+                lens?: "both" | "top" | "bottom";
             };
             header?: never;
             path: {

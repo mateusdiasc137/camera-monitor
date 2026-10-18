@@ -12,6 +12,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import AwareDatetime, BaseModel
 
 from nvr.recordings.application import RecordingsView
+from nvr.recordings.domain import Lens
+from nvr.shared.errors import ValidationFailed
 
 router = APIRouter(prefix="/recordings", tags=["recordings"])
 
@@ -64,11 +66,14 @@ async def list_recordings(
     return RecordingsOut.from_view(view)
 
 
-def _download_name(camera_name: str, start: datetime) -> str:
-    """Nome ASCII seguro para o cabeçalho: "camera-da-frente_2026-10-17_18-04-57.mp4"."""
+LENS_SUFFIX = {Lens.BOTH: "", Lens.TOP: "_superior", Lens.BOTTOM: "_inferior"}
+
+
+def _download_name(camera_name: str, start: datetime, lens: Lens = Lens.BOTH) -> str:
+    """Nome ASCII seguro para o cabeçalho: "camera-da-frente_2026-10-17_18-04-57_superior.mp4"."""
     ascii_name = unicodedata.normalize("NFKD", camera_name).encode("ascii", "ignore").decode()
     slug = re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-").lower() or "camera"
-    return f"{slug}_{start.astimezone().strftime('%Y-%m-%d_%H-%M-%S')}.mp4"
+    return f"{slug}_{start.astimezone().strftime('%Y-%m-%d_%H-%M-%S')}{LENS_SUFFIX[lens]}.mp4"
 
 
 @router.get(
@@ -85,13 +90,28 @@ async def recording_video(
     duration: Annotated[float, Query(gt=0, le=7200, description="segundos")],
     format: Literal["fmp4", "mp4"] = "fmp4",
     download: bool = False,
+    lens: Annotated[
+        Literal["both", "top", "bottom"],
+        Query(description="download: quadro inteiro ou só a lente de cima/de baixo (câmeras de 2 lentes)"),
+    ] = "both",
 ) -> StreamingResponse:
-    """Reprodução (fmp4, progressivo) ou download (mp4) de um trecho.
+    """Reprodução (fmp4, progressivo) ou download (mp4 comum) de um trecho.
 
-    Sem suporte a Range (o MediaMTX gera o trecho na hora): para pular, peça outro início.
+    O download cobre o intervalo inteiro, juntando os trechos gravados se houver buracos, e pode trazer
+    só uma lente (recorte sem recodificar). Sem suporte a Range: para pular, peça outro início.
     """
-    clip = await request.app.state.use_cases.open_recording(camera_id, start, duration, format)
+    use_cases = request.app.state.use_cases
+    chosen = Lens(lens)
     headers = {"Cache-Control": "no-store"}
     if download:
-        headers["Content-Disposition"] = f'attachment; filename="{_download_name(clip.camera_name, start)}"'
+        clip = await use_cases.export_recording(camera_id, start, duration, chosen)
+        name = _download_name(clip.camera_name, clip.start, chosen)
+        headers["Content-Disposition"] = f'attachment; filename="{name}"'
+    elif chosen is not Lens.BOTH:
+        raise ValidationFailed("o recorte de lente vale só para download", {"lens": "use download=true"})
+    else:
+        clip = await use_cases.open_recording(camera_id, start, duration, format)
+    size = getattr(clip.stream, "size", None)
+    if isinstance(size, int):
+        headers["Content-Length"] = str(size)
     return StreamingResponse(clip.stream.chunks(), media_type="video/mp4", headers=headers)

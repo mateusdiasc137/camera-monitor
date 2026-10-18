@@ -2009,7 +2009,7 @@
     },
     "/api/v1/recordings/{camera_id}/video": {
       "get": {
-        "description": "Reprodução (fmp4, progressivo) ou download (mp4) de um trecho.\n\nSem suporte a Range (o MediaMTX gera o trecho na hora): para pular, peça outro início.",
+        "description": "Reprodução (fmp4, progressivo) ou download (mp4 comum) de um trecho.\n\nO download cobre o intervalo inteiro, juntando os trechos gravados se houver buracos, e pode trazer\nsó uma lente (recorte sem recodificar). Sem suporte a Range: para pular, peça outro início.",
         "operationId": "recording_video_api_v1_recordings__camera_id__video_get",
         "parameters": [
           {
@@ -2066,6 +2066,23 @@
               "default": false,
               "title": "Download",
               "type": "boolean"
+            }
+          },
+          {
+            "description": "download: quadro inteiro ou só a lente de cima/de baixo (câmeras de 2 lentes)",
+            "in": "query",
+            "name": "lens",
+            "required": false,
+            "schema": {
+              "default": "both",
+              "description": "download: quadro inteiro ou só a lente de cima/de baixo (câmeras de 2 lentes)",
+              "enum": [
+                "both",
+                "top",
+                "bottom"
+              ],
+              "title": "Lens",
+              "type": "string"
             }
           }
         ],

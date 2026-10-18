@@ -523,12 +523,14 @@ select {
 
 .timeline__bar {
   position: relative;
-  height: 40px;
+  height: 44px;
   border-radius: 6px;
   background: var(--surface);
   border: 1px solid var(--border);
   cursor: pointer;
   overflow: hidden;
+  touch-action: none; /* gestos (arrastar, pinça) ficam com a barra, não com a página */
+  user-select: none;
 }
 
 .timeline__bar span {
@@ -783,4 +785,181 @@ button.folder:hover {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+/* Gravações: vídeo com a barra de corte logo abaixo */
+.recording-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 1100px;
+  margin-top: 8px;
+}
+
+.recording-placeholder {
+  aspect-ratio: 16 / 9;
+  max-height: 50vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  border-radius: 6px;
+  background: #000;
+  color: #c9ced6;
+}
+
+.trim {
+  margin: 0;
+}
+
+.trim__track {
+  position: relative;
+}
+
+.trim__mask {
+  background: rgb(0 0 0 / 45%);
+  pointer-events: none;
+}
+
+.timeline__bar .trim__selection {
+  border-top: 3px solid #f5b301;
+  border-bottom: 3px solid #f5b301;
+  pointer-events: none;
+}
+
+.trim__selection-swatch {
+  border: 2px solid #f5b301;
+}
+
+/* Alças: alvo largo para o dedo, desenho de colchete como em editores de vídeo. */
+.trim__handle {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 32px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 2;
+}
+
+.trim__handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 11px;
+  width: 10px;
+  background: #f5b301;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 40%);
+}
+
+.trim__handle--start::before {
+  border-radius: 6px 0 0 6px;
+}
+
+.trim__handle--end::before {
+  border-radius: 0 6px 6px 0;
+}
+
+.trim__handle::after {
+  content: '';
+  position: absolute;
+  top: 35%;
+  bottom: 35%;
+  left: 15px;
+  width: 2px;
+  background: rgb(0 0 0 / 55%);
+}
+
+.trim__handle:focus-visible {
+  outline: 2px solid #2457c5;
+  outline-offset: 2px;
+}
+
+.trim__ticks {
+  position: relative;
+  height: 18px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  overflow: hidden;
+}
+
+.trim__ticks span {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.trim__zoom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.trim__zoom button {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 6px 10px;
+}
+
+.trim__span {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 9em;
+  text-align: center;
+}
+
+.cut {
+  max-width: 1100px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cut__times {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.cut__time {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.cut__time input {
+  font-variant-numeric: tabular-nums;
+  min-width: 8.5em;
+}
+
+.cut__duration {
+  margin: 0 0 8px;
+}
+
+.cut__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button-link--primary {
+  background: #2457c5;
+  border-color: #2457c5;
+  color: #fff;
+}
+
+.recording-frame {
+  margin: 0 auto;
 }

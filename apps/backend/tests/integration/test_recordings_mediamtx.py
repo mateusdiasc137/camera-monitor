@@ -15,9 +15,9 @@ import pytest
 from nvr.bootstrap.container import build_container
 from nvr.bootstrap.settings import Settings
 from nvr.cameras.application import CameraDraft
-from nvr.cameras.domain import CameraCredentials
+from nvr.cameras.domain import CameraCredentials, LensLayout
 from nvr.persistence.database import migrate
-from nvr.recordings.domain import RECORD_FILENAME_TEMPLATE, LocationMode, MigrationState, Segment
+from nvr.recordings.domain import RECORD_FILENAME_TEMPLATE, Lens, LocationMode, MigrationState, Segment
 from nvr.streaming.domain import PathSpec
 
 REPO = Path(__file__).resolve().parents[4]
@@ -273,3 +273,135 @@ pathDefaults:
         clip_file = tmp_path / f"{label}.mp4"
         clip_file.write_bytes(clips[label])
         assert ffprobe_duration(clip_file) == pytest.approx(expected, abs=0.8), label
+
+
+def has_encoder(name: str) -> bool:
+    if shutil.which("ffmpeg") is None:
+        return False
+    out = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], capture_output=True, text=True).stdout
+    return f" {name} " in out
+
+
+def chroma_u(path: Path) -> float:
+    """Média do Cb (U) de um quadro: azul puro ≈ 240; o padrão de teste fica perto de 128."""
+    out = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-loglevel", "error", "-ss", "0.5", "-i", str(path), "-frames:v", "1",
+         "-vf", "signalstats,metadata=print:file=-", "-f", "null", "-"],
+        capture_output=True, text=True, check=True,
+    ).stdout  # fmt: skip
+    return float(next(line.split("=")[1] for line in out.splitlines() if "signalstats.UAVG" in line))
+
+
+def ffprobe_video(path: Path) -> tuple[str, int, int]:
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=codec_name,width,height", "-of", "csv=p=0", str(path)],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()  # fmt: skip
+    codec, width, height = out.split(",")
+    return codec, int(width), int(height)
+
+
+@pytest.mark.skipif(not has_encoder("libx265"), reason="FFmpeg sem libx265")
+def test_export_joins_pieces_across_a_gap_and_crops_each_lens(tmp_path: Path) -> None:
+    """Download do intervalo inteiro apesar do buraco (o playback do MediaMTX para nele) e de cada lente."""
+    api_port, rtsp_port, playback_port = 19975, 18536, 19974
+    data, recordings = tmp_path / "data", tmp_path / "recordings"
+    migrate(data)
+    container = build_container(
+        Settings(
+            data_dir=data,
+            recordings_dir=recordings,
+            ffmpeg_path="ffmpeg",  # o conftest desliga o FFmpeg por isolamento; aqui ele monta o download
+            mediamtx_api_url=f"http://127.0.0.1:{api_port}",
+            mediamtx_playback_url=f"http://127.0.0.1:{playback_port}",
+        )
+    )
+    config = tmp_path / "mediamtx.yml"
+    config.write_text(
+        f"""
+logLevel: warn
+api: true
+apiAddress: 127.0.0.1:{api_port}
+rtsp: true
+rtspAddress: 127.0.0.1:{rtsp_port}
+rtspTransports: [tcp]
+rtmp: false
+hls: false
+webrtc: false
+srt: false
+moq: false
+playback: true
+playbackAddress: 127.0.0.1:{playback_port}
+authMethod: internal
+authInternalUsers:
+  - user: any
+    ips: ["127.0.0.1", "::1"]
+    permissions: [{{action: api}}, {{action: publish}}, {{action: playback}}]
+pathDefaults:
+  recordFormat: fmp4
+  recordSegmentDuration: 2s
+  recordPartDuration: 200ms
+  recordDeleteAfter: 0s
+""",
+        encoding="utf-8",
+    )
+    server = subprocess.Popen([str(mediamtx_binary()), str(config)], cwd=tmp_path)
+
+    def publish(name: str, seconds: int) -> None:
+        # "Duas lentes" empilhadas: em cima o padrão de teste, embaixo azul (320x480, H.265).
+        subprocess.run(
+            ["ffmpeg", "-hide_banner", "-loglevel", "error", "-re",
+             "-f", "lavfi", "-i", f"testsrc2=size=320x240:rate=10:duration={seconds}",
+             "-f", "lavfi", "-i", f"color=c=blue:size=320x240:rate=10:duration={seconds}",
+             "-filter_complex", "[0][1]vstack", "-c:v", "libx265", "-x265-params", "log-level=error",
+             "-g", "10", "-pix_fmt", "yuv420p", "-f", "rtsp", "-rtsp_transport", "tcp",
+             f"rtsp://127.0.0.1:{rtsp_port}/{name}"],
+            check=True, timeout=120,
+        )  # fmt: skip
+
+    async def scenario() -> dict[str, tuple[bytes, float]]:
+        draft = CameraDraft(
+            "Duas Lentes", "127.0.0.1", "/x", CameraCredentials("u", "p"), lens_layout=LensLayout.STACKED2
+        )
+        camera_id = (await container.register_camera(draft, "teste")).id
+        name = f"cam-{camera_id}-main"
+        await container.ensure_storage_location()
+        await asyncio.sleep(1.0)
+        await container.media_api.put_path(PathSpec(name, True, container.record_dir.record_path()))
+        started = datetime.now(UTC)
+        await asyncio.to_thread(publish, name, 4)
+        await asyncio.sleep(3)  # câmera "fora do ar": buraco de ~3 s
+        await asyncio.to_thread(publish, name, 4)
+        await asyncio.sleep(1)
+        ended = datetime.now(UTC)
+        await container.index_segments()
+        results: dict[str, tuple[bytes, float]] = {}
+        for lens in (Lens.BOTH, Lens.TOP, Lens.BOTTOM):
+            clip = await container.export_recording(
+                camera_id, started - timedelta(seconds=1), (ended - started).total_seconds() + 2, lens
+            )
+            assert getattr(clip.stream, "size", 0) > 0
+            results[lens.value] = (b"".join([c async for c in clip.stream.chunks()]), clip.duration_s)
+        await container.aclose()
+        return results
+
+    try:
+        results = asyncio.run(scenario())
+    finally:
+        server.kill()
+        server.wait(timeout=10)
+
+    files = {}
+    for lens, (content, _reported) in results.items():
+        files[lens] = tmp_path / f"{lens}.mp4"
+        files[lens].write_bytes(content)
+    assert ffprobe_duration(files["both"]) == pytest.approx(8.0, abs=1.5)  # as duas partes, sem o buraco
+    assert results["both"][1] == pytest.approx(ffprobe_duration(files["both"]), abs=1.0)
+    assert ffprobe_video(files["both"]) == ("hevc", 320, 480)
+    assert ffprobe_video(files["top"]) == ("hevc", 320, 240)
+    assert ffprobe_video(files["bottom"]) == ("hevc", 320, 240)
+    assert ffprobe_duration(files["top"]) == pytest.approx(8.0, abs=1.5)
+    assert chroma_u(files["bottom"]) > 200  # a lente de baixo é a azul
+    assert chroma_u(files["top"]) < 170
+    assert not list((data / "exportacoes").glob("exportacao-*"))  # temporários apagados após o envio

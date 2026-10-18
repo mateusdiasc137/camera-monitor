@@ -22,6 +22,7 @@ from nvr.http.routers import auth, cameras, internal, live, recordings, status, 
 from nvr.http.security import SameOriginMiddleware, current_user
 from nvr.identity.application import Authenticate, Login, Logout
 from nvr.recordings.application import ListRecordings, OpenRecording
+from nvr.recordings.export import ExportRecording
 from nvr.recordings.location import (
     BrowseStorage,
     ChangeStorageLocation,
@@ -90,6 +91,8 @@ class UseCases(Protocol):
     def list_recordings(self) -> ListRecordings: ...
     @property
     def open_recording(self) -> OpenRecording: ...
+    @property
+    def export_recording(self) -> ExportRecording: ...
     @property
     def get_storage_overview(self) -> GetStorageOverview: ...
     @property
