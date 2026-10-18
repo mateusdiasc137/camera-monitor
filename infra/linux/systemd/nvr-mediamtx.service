@@ -1,0 +1,49 @@
+# NVR Camera Monitor — servidor de mídia (MediaMTX). Instalado por infra/linux/install.sh.
+# Grava nas raízes de armazenamento (drop-in storage.conf) com o grupo "nvr", para o backend apagar e mover.
+[Unit]
+Description=NVR Camera Monitor - servidor de mídia (MediaMTX)
+Documentation=https://github.com/mateusdiasc137/camera-monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nvr-media
+Group=nvr
+ExecStart=/opt/nvr/tools/mediamtx/current/mediamtx /etc/nvr/mediamtx.yml
+Restart=always
+RestartSec=2
+# Arquivos e pastas de gravação: rw para o grupo nvr (o backend aplica a cota e migra).
+UMask=0007
+
+# --- Endurecimento ---
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+DevicePolicy=closed
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+# AF_NETLINK: o WebRTC enumera as interfaces de rede para os candidatos ICE.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

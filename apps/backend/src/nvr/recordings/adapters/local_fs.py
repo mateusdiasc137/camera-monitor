@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import getpass
+import importlib
 import os
 import uuid
 from pathlib import Path
+from typing import Any
 
 from nvr.recordings.ports import FolderCheck, FolderEntry
 from nvr.streaming.domain import parse_path_name
@@ -100,4 +102,8 @@ class LocalStorageFilesystem:
         user = getpass.getuser()
         if os.name == "nt":
             return f'icacls "{path}" /grant "{user}:(OI)(CI)M"'
-        return f"sudo chown -R {user}: '{path}'"
+        # Servidor: grupo compartilhado com o MediaMTX e setgid, para as gravações herdarem o grupo.
+        # (grp/getgid só existem fora do Windows: carregados aqui para a análise de tipos no Windows.)
+        posix: Any = os
+        group = importlib.import_module("grp").getgrgid(posix.getgid()).gr_name
+        return f"sudo chown {user}:{group} '{path}' && sudo chmod 2770 '{path}'"

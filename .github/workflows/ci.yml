@@ -102,7 +102,51 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.0
-      - run: uv run --no-project --python 3.12 python -m compileall -q scripts
+      - run: uv run --no-project --python 3.12 python -m compileall -q scripts infra
+
+  install-linux:
+    # Instalação real numa VM Ubuntu com systemd: serviços, usuários, sandbox, firewall, HTTPS, gravação
+    # de uma câmera falsa, permissões entre os serviços, reinício, atualização e remoção.
+    name: instalação no Ubuntu Server (systemd)
+    runs-on: ubuntu-24.04
+    env:
+      NVR_VERIFY_PASSWORD: senha-de-teste-123
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: interface compilada
+        working-directory: apps/web
+        run: npm ci && npm run build
+      - name: instalar (com firewall da LAN)
+        run: sudo infra/linux/install.sh --storage-root /srv/nvr --site-address nvr-camera-monitor.home.arpa --firewall auto --yes
+      - name: primeiro usuário (como no servidor de verdade)
+        run: printf '%s\n%s\n' "$NVR_VERIFY_PASSWORD" "$NVR_VERIFY_PASSWORD" | sudo nvr-admin create-user admin
+      - name: câmera falsa (RTSP local na porta 8654)
+        run: |
+          nohup python3 scripts/fake_camera.py > /tmp/fake-camera.log 2>&1 &
+          for i in $(seq 30); do (exec 3<>/dev/tcp/127.0.0.1/8654) 2>/dev/null && break; sleep 1; done
+      - name: verificar a instalação, a gravação e o reinício
+        run: sudo --preserve-env=NVR_VERIFY_PASSWORD /opt/nvr/app/.venv/bin/python infra/linux/verify_install.py --user admin --password-env NVR_VERIFY_PASSWORD --camera 127.0.0.1:8654
+      - name: atualizar (instalar de novo) mantém dados e configuração
+        run: |
+          sudo infra/linux/install.sh --yes
+          sudo --preserve-env=NVR_VERIFY_PASSWORD /opt/nvr/app/.venv/bin/python infra/linux/verify_install.py --user admin --password-env NVR_VERIFY_PASSWORD
+      - name: firewall
+        run: sudo ufw status verbose
+      - name: logs dos serviços (em caso de falha)
+        if: failure()
+        run: |
+          sudo journalctl -u nvr-mediamtx -u nvr-api -u nvr-caddy --no-pager -n 300
+          cat /tmp/fake-camera.log || true
+      - name: remover
+        run: |
+          sudo infra/linux/uninstall.sh
+          if systemctl list-unit-files | grep -q '^nvr-'; then echo "units do NVR ainda instaladas"; exit 1; fi
+          test -d /srv/nvr/recordings  # gravações nunca são apagadas
 
   secrets:
     name: varredura de segredos

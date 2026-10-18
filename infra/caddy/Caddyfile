@@ -12,7 +12,7 @@
 #   NVR_SITE_ADDRESSES  nomes/IPs do certificado, separados por vírgula   (nvr-camera-monitor.local)
 #   NVR_BACKEND         backend FastAPI                                    (127.0.0.1:8000)
 #   NVR_WEB_ROOT        interface compilada (apps/web/dist)                (/opt/nvr/web)
-#   NVR_CA_DIR          pasta da CA local do Caddy (contém root.crt)       (/var/lib/caddy/.local/share/caddy/pki/authorities/local)
+#   NVR_CA_DIR          pasta da CA local do Caddy (contém root.crt)       (/var/lib/nvr-caddy/caddy/pki/authorities/local)
 #   NVR_HTTPS_PORT / NVR_HTTP_PORT                                         (443 / 80)
 #   NVR_HTTPS_SUFFIX    ":<porta>" no redirecionamento se o HTTPS não for 443 (vazio)
 #   NVR_CADDY_ADMIN     API de administração do Caddy                      (localhost:2019; "off" desliga)
@@ -80,7 +80,7 @@
 http:// {
 	# O certificado raiz é público; confira a impressão digital (SHA-256) antes de confiar (guia).
 	handle /nvr-ca.crt {
-		root * {$NVR_CA_DIR:/var/lib/caddy/.local/share/caddy/pki/authorities/local}
+		root * {$NVR_CA_DIR:/var/lib/nvr-caddy/caddy/pki/authorities/local}
 		rewrite * /root.crt
 		header Content-Type "application/x-x509-ca-cert"
 		header Content-Disposition "attachment; filename=\"nvr-ca.crt\""

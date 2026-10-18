@@ -38,5 +38,28 @@
         "sha512": "3db36ba90c7a6e8dda40ee3dd71fa08844c76b5fb08f61b31e5e78d2ed38e71c51dc7baed875e50d1ca1279196e84302967237386ae87c91ae9f2aaceada682e"
       }
     }
+  },
+  "uv": {
+    "version": "0.12.23",
+    "license": "MIT OR Apache-2.0",
+    "source": "https://github.com/astral-sh/uv",
+    "url": "https://github.com/astral-sh/uv/releases/download/{version}/{asset}",
+    "assets": {
+      "windows-amd64": {
+        "asset": "uv-x86_64-pc-windows-msvc.zip",
+        "sha256": "75d05de6762778c31ee183398de7dd15093fad0ed90b1f236d8205ea5ec00c90",
+        "binary": "uv.exe"
+      },
+      "linux-amd64": {
+        "asset": "uv-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "9167d72b3319674b6303c4cbe071854bba13ebdf3d76b1a7cbdc175471fb66d6",
+        "binary": "uv-x86_64-unknown-linux-gnu/uv"
+      },
+      "linux-arm64": {
+        "asset": "uv-aarch64-unknown-linux-gnu.tar.gz",
+        "sha256": "6524bd338177ed50d035d39354e12545e993bbeba2ecbddf0480c5b3a81d313f",
+        "binary": "uv-aarch64-unknown-linux-gnu/uv"
+      }
+    }
   }
 }

@@ -59,7 +59,10 @@ def safe_extract(archive: Path, dest: Path) -> None:
                 check(member.name)
                 if member.issym() or member.islnk():
                     raise SystemExit(f"Link não esperado no arquivo compactado: {member.name}")
-            tf.extractall(dest, filter="data")
+            try:
+                tf.extractall(dest, filter="data")
+            except TypeError:  # Python 3.11.0-3.11.3 (Debian 12/MX): sem filtro; os nomes já foram conferidos
+                tf.extractall(dest)  # noqa: S202
 
 
 def tool_dir(name: str) -> Path:

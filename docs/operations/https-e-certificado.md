@@ -11,7 +11,7 @@ Ela identifica a sua CA. Anote os primeiros e os últimos grupos para comparar n
 - **Servidor Ubuntu:**
   ```bash
   sudo openssl x509 -noout -fingerprint -sha256 \
-    -in /var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt
+    -in /var/lib/nvr-caddy/caddy/pki/authorities/local/root.crt
   ```
 - **Desenvolvimento (este PC):** `python scripts/dev_caddy.py` mostra a linha `SHA-256 da CA`.
 
@@ -78,5 +78,5 @@ O servidor deve ter **IP fixo** (fora da faixa do DHCP do roteador). Esse IP tam
 ## Riscos e cuidados
 
 - Um aparelho que confia na CA aceitaria certificados de **qualquer** site emitidos com a chave dela. A chave fica só no servidor: proteja o servidor (atualizações, senha forte, sem acesso remoto aberto).
-- Faça backup da pasta `pki` do Caddy (`/var/lib/caddy/.local/share/caddy/pki`). Se ela se perder, uma nova CA é criada e todos os aparelhos precisam reinstalar.
+- Faça backup da pasta `pki` do Caddy (`/var/lib/nvr-caddy/caddy/pki`). Se ela se perder, uma nova CA é criada e todos os aparelhos precisam reinstalar.
 - Ao desativar o NVR, **remova a CA** dos aparelhos (mesmos menus da instalação).

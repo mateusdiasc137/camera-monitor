@@ -14,7 +14,7 @@ O painel precisa de HTTPS: o cookie de sessão é `Secure`, o navegador só libe
 - **Cabeçalhos:** HSTS (1 ano), CSP restritiva (`script-src 'self'`, `connect-src 'self'`, `frame-ancestors 'none'`...), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy` (microfone só para a própria origem). `Server` removido. Arquivos com hash em `/assets/` ficam em cache por 1 ano; o resto, `no-cache`.
 - **Fluxo contínuo:** `flush_interval -1` no proxy da API (SSE e vídeo não ficam retidos); limite de 2 MB no corpo das requisições da API.
 - **Nome na LAN:** no Ubuntu Server, Avahi publica o próprio nome da máquina (`hostnamectl set-hostname nvr-camera-monitor` → `nvr-camera-monitor.local`). O IP fixo é a reserva (Android nem sempre resolve `.local`).
-- **Versão fixada** para desenvolvimento e testes (`tools/manifest.json`: Caddy v2.11.7, SHA-512 do projeto); no servidor, o pacote oficial do Caddy (F1-19).
+- **Versão fixada** (`tools/manifest.json`: Caddy v2.11.7, SHA-512 do projeto), a mesma no desenvolvimento, nos testes e no servidor (serviço `nvr-caddy`, F1-19).
 
 ## Validação
 
@@ -23,7 +23,7 @@ O painel precisa de HTTPS: o cookie de sessão é `Secure`, o navegador só libe
 
 ## Consequências
 
-- **Risco da CA própria:** um aparelho que confia nela aceitaria certificados de qualquer site emitidos com a chave da raiz. A chave fica só no servidor (`/var/lib/caddy/.local/share/caddy/pki`, legível só pelo usuário `caddy`); proteger o servidor protege os aparelhos. Ao desativar o NVR, remova a CA dos aparelhos.
+- **Risco da CA própria:** um aparelho que confia nela aceitaria certificados de qualquer site emitidos com a chave da raiz. A chave fica só no servidor (`/var/lib/nvr-caddy/caddy/pki`, legível só pelo usuário `nvr-caddy`); proteger o servidor protege os aparelhos. Ao desativar o NVR, remova a CA dos aparelhos.
 - **Backup:** perder a pasta `pki` do Caddy obriga a reinstalar a CA em todos os aparelhos (entra no guia de backup da F1-20).
 - O primeiro acesso de cada aparelho exige instalar a CA uma vez (guia em `docs/operations/https-e-certificado.md`).
 - Portas 80/443 exigem `CAP_NET_BIND_SERVICE` para o Caddy no systemd (F1-19); em desenvolvimento, `scripts/dev_caddy.py` usa 8443/8080.

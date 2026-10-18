@@ -65,11 +65,21 @@ def load_dotenv(path: Path = ROOT / ".env") -> dict[str, str]:
     return values
 
 
+def _platform_key() -> str:
+    import platform
+
+    machine = platform.machine().lower()
+    arch = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}.get(machine, machine)
+    return f"{platform.system().lower()}-{arch}"
+
+
 def tool_binary(name: str) -> Path:
-    """Binário baixado por fetch_tools.py (tools/<nome>/<versão>/<nome>[.exe])."""
+    """Binário baixado por fetch_tools.py (tools/<nome>/<versão>/<nome>[.exe], ou o caminho do manifesto)."""
     manifest = json.loads((ROOT / "tools" / "manifest.json").read_text(encoding="utf-8"))
-    version = manifest[name]["version"]
-    binary = ROOT / "tools" / name / version / (f"{name}.exe" if sys.platform == "win32" else name)
+    spec = manifest[name]
+    default = f"{name}.exe" if sys.platform == "win32" else name
+    relative = spec["assets"].get(_platform_key(), {}).get("binary", default)
+    binary = ROOT / "tools" / name / spec["version"] / relative
     if not binary.exists():
         raise SystemExit(f"{name} não encontrado em {binary}. Rode: python scripts/fetch_tools.py")
     return binary

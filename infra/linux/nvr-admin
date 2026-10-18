@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# CLI do NVR no servidor, como o usuário do serviço e com a configuração de produção.
+# Ex.: sudo nvr-admin create-user admin      (a senha é pedida no terminal)
+set -euo pipefail
+if [[ $EUID -ne 0 ]]; then exec sudo "$0" "$@"; fi
+set -a
+# shellcheck source=/dev/null
+. /etc/nvr/nvr.env
+set +a
+cd /var/lib/nvr
+exec runuser -u nvr -- /opt/nvr/app/.venv/bin/nvr "$@"

@@ -1,0 +1,52 @@
+# NVR Camera Monitor — HTTPS na LAN (Caddy, ADR-007). Instalado por infra/linux/install.sh.
+# Único serviço que escuta na rede (80/443); a CA local fica em /var/lib/nvr-caddy (só deste usuário).
+[Unit]
+Description=NVR Camera Monitor - HTTPS (Caddy)
+Documentation=https://github.com/mateusdiasc137/camera-monitor
+After=network-online.target nvr-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nvr-caddy
+Group=nvr-caddy
+EnvironmentFile=/etc/nvr/caddy.env
+Environment=HOME=/var/lib/nvr-caddy XDG_DATA_HOME=/var/lib/nvr-caddy XDG_CONFIG_HOME=/var/lib/nvr-caddy/config
+StateDirectory=nvr-caddy
+StateDirectoryMode=0700
+ExecStart=/opt/nvr/tools/caddy/current/caddy run --config /etc/nvr/Caddyfile --adapter caddyfile
+Restart=always
+RestartSec=2
+LimitNOFILE=1048576
+# Só a capacidade de abrir as portas 80/443.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# --- Endurecimento ---
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+DevicePolicy=closed
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,57 @@
+# NVR Camera Monitor — backend (API, relays FFmpeg, índice, cota). Instalado por infra/linux/install.sh.
+# Escuta só em 127.0.0.1:8000; o acesso pela rede é pelo nvr-caddy (HTTPS).
+[Unit]
+Description=NVR Camera Monitor - backend (API e relays)
+Documentation=https://github.com/mateusdiasc137/camera-monitor
+After=network-online.target nvr-mediamtx.service
+Wants=network-online.target nvr-mediamtx.service
+
+[Service]
+Type=simple
+User=nvr
+Group=nvr
+EnvironmentFile=/etc/nvr/nvr.env
+# Banco, cofre de credenciais e temporários de download: /var/lib/nvr (só do usuário nvr).
+StateDirectory=nvr
+StateDirectoryMode=0750
+WorkingDirectory=/var/lib/nvr
+ExecStart=/opt/nvr/app/.venv/bin/nvr serve
+Restart=always
+RestartSec=2
+UMask=0007
+# Ao parar, o systemd encerra o grupo inteiro, inclusive os relays FFmpeg (filhos).
+KillMode=control-group
+TimeoutStopSec=30
+
+# --- Endurecimento ---
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+DevicePolicy=closed
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+# O serviço não enxerga processos de outros usuários. (O inverso — esconder os argumentos dos relays,
+# que levam a senha da câmera, dos outros usuários — exige hidepid no /proc do sistema; ver o guia.)
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target
