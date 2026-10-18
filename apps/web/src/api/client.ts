@@ -20,16 +20,28 @@ export type CameraUpdate = components['schemas']['CameraUpdateIn']
 export type ProbeResult = components['schemas']['ProbeResultOut']
 export type CameraStatus = components['schemas']['CameraStatusOut']
 export type Recordings = components['schemas']['RecordingsOut']
+export type Storage = components['schemas']['StorageOut']
+export type StoragePolicyIn = components['schemas']['PolicyIn']
 
 /** Erro de API com o status HTTP, a mensagem amigável e, em validações, os erros por campo. */
 export class ApiError extends Error {
   readonly status: number
   readonly fields: Record<string, string>
+  readonly code: string
+  readonly details: Record<string, unknown>
 
-  constructor(status: number, message: string, fields: Record<string, string> = {}) {
+  constructor(
+    status: number,
+    message: string,
+    fields: Record<string, string> = {},
+    code = '',
+    details: Record<string, unknown> = {},
+  ) {
     super(message)
     this.status = status
     this.fields = fields
+    this.code = code
+    this.details = details
   }
 }
 
@@ -43,5 +55,7 @@ export function apiError(response: Response, body: unknown, fallback: string): A
     isRecord(body) && isRecord(body.fields)
       ? Object.fromEntries(Object.entries(body.fields).filter((e): e is [string, string] => typeof e[1] === 'string'))
       : {}
-  return new ApiError(response.status, message, fields)
+  const code = isRecord(body) && typeof body.error === 'string' ? body.error : ''
+  const details = isRecord(body) && isRecord(body.details) ? body.details : {}
+  return new ApiError(response.status, message, fields, code, details)
 }

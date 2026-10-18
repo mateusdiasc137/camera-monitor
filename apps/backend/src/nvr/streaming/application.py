@@ -61,10 +61,13 @@ class ReconcileMedia:
         media: MediaServer,
         relays: RelaySupervisor,
         record_path: str,
+        recording_allowed: Callable[[], bool] | None = None,
     ) -> None:
         """`record_path`: recordPath completo do MediaMTX (local de gravação + padrão de nome)."""
         self._cameras, self._secrets, self._media, self._relays = cameras, secrets, media, relays
         self._record_template = record_path
+        # Trava global (armazenamento cheio com a política "parar quando encher").
+        self._recording_allowed = recording_allowed or (lambda: True)
         self._lock = asyncio.Lock()
 
     def _profiles(self, camera: Camera) -> list[StreamProfile]:
@@ -88,7 +91,9 @@ class ReconcileMedia:
                 continue
             for profile in self._profiles(camera):
                 name = path_name(camera.id, profile)
-                record = profile is StreamProfile.MAIN and camera.recording_enabled
+                record = (
+                    profile is StreamProfile.MAIN and camera.recording_enabled and self._recording_allowed()
+                )
                 desired_paths[name] = PathSpec(name, record, self._record_template)
                 desired_relays[name] = RelaySpec(name, rtsp_url(camera, profile, credentials))
 

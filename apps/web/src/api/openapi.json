@@ -393,6 +393,114 @@
         "title": "CameraUpdateIn",
         "type": "object"
       },
+      "CameraUsageOut": {
+        "properties": {
+          "bytes": {
+            "title": "Bytes",
+            "type": "integer"
+          },
+          "camera_id": {
+            "title": "Camera Id",
+            "type": "string"
+          },
+          "camera_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null = câmera removida (gravações órfãs)",
+            "title": "Camera Name"
+          },
+          "gb_per_day": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gb Per Day"
+          },
+          "newest": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newest"
+          },
+          "oldest": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest"
+          }
+        },
+        "required": [
+          "camera_id",
+          "camera_name",
+          "bytes",
+          "oldest",
+          "newest",
+          "gb_per_day"
+        ],
+        "title": "CameraUsageOut",
+        "type": "object"
+      },
+      "CleanupOut": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "deleted_files": {
+            "title": "Deleted Files",
+            "type": "integer"
+          },
+          "freed_bytes": {
+            "title": "Freed Bytes",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "cleaning",
+              "full"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "state",
+          "reason",
+          "deleted_files",
+          "freed_bytes"
+        ],
+        "title": "CleanupOut",
+        "type": "object"
+      },
       "ComponentHealthOut": {
         "properties": {
           "detail": {
@@ -507,6 +615,86 @@
         "title": "LoginIn",
         "type": "object"
       },
+      "PolicyIn": {
+        "properties": {
+          "confirm": {
+            "default": false,
+            "description": "confirma apagar gravações se a cota for menor que o uso",
+            "title": "Confirm",
+            "type": "boolean"
+          },
+          "quota_gb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null = sem cota (só o piso de espaço livre)",
+            "title": "Quota Gb"
+          },
+          "replacement": {
+            "default": "overwrite_oldest",
+            "enum": [
+              "overwrite_oldest",
+              "stop_when_full"
+            ],
+            "title": "Replacement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quota_gb"
+        ],
+        "title": "PolicyIn",
+        "type": "object"
+      },
+      "PolicyOut": {
+        "properties": {
+          "high_watermark": {
+            "title": "High Watermark",
+            "type": "number"
+          },
+          "low_watermark": {
+            "title": "Low Watermark",
+            "type": "number"
+          },
+          "min_free_gb": {
+            "title": "Min Free Gb",
+            "type": "number"
+          },
+          "quota_gb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Gb"
+          },
+          "replacement": {
+            "enum": [
+              "overwrite_oldest",
+              "stop_when_full"
+            ],
+            "title": "Replacement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quota_gb",
+          "replacement",
+          "high_watermark",
+          "low_watermark",
+          "min_free_gb"
+        ],
+        "title": "PolicyOut",
+        "type": "object"
+      },
       "ProbeResultOut": {
         "properties": {
           "detail": {
@@ -615,6 +803,79 @@
           "recording_now"
         ],
         "title": "RecordingsOut",
+        "type": "object"
+      },
+      "StorageOut": {
+        "properties": {
+          "cameras": {
+            "items": {
+              "$ref": "#/components/schemas/CameraUsageOut"
+            },
+            "title": "Cameras",
+            "type": "array"
+          },
+          "days_covered": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Covered"
+          },
+          "disk_free_bytes": {
+            "title": "Disk Free Bytes",
+            "type": "integer"
+          },
+          "disk_total_bytes": {
+            "title": "Disk Total Bytes",
+            "type": "integer"
+          },
+          "last_cleanup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CleanupOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location_path": {
+            "title": "Location Path",
+            "type": "string"
+          },
+          "pause_reason": {
+            "title": "Pause Reason",
+            "type": "string"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/PolicyOut"
+          },
+          "recording_paused": {
+            "title": "Recording Paused",
+            "type": "boolean"
+          },
+          "used_bytes": {
+            "title": "Used Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "location_path",
+          "policy",
+          "used_bytes",
+          "disk_total_bytes",
+          "disk_free_bytes",
+          "cameras",
+          "days_covered",
+          "recording_paused",
+          "pause_reason",
+          "last_cleanup"
+        ],
+        "title": "StorageOut",
         "type": "object"
       },
       "SystemHealthOut": {
@@ -1489,6 +1750,68 @@
         "summary": "Recording Video",
         "tags": [
           "recordings"
+        ]
+      }
+    },
+    "/api/v1/storage": {
+      "get": {
+        "operationId": "get_storage_api_v1_storage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Storage",
+        "tags": [
+          "storage"
+        ]
+      }
+    },
+    "/api/v1/storage/policy": {
+      "put": {
+        "operationId": "update_policy_api_v1_storage_policy_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Policy",
+        "tags": [
+          "storage"
         ]
       }
     },

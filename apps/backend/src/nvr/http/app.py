@@ -18,10 +18,11 @@ from nvr.cameras.application import (
     TestCameraConnection,
     UpdateCamera,
 )
-from nvr.http.routers import auth, cameras, internal, live, recordings, status, system
+from nvr.http.routers import auth, cameras, internal, live, recordings, status, storage, system
 from nvr.http.security import SameOriginMiddleware, current_user
 from nvr.identity.application import Authenticate, Login, Logout
 from nvr.recordings.application import ListRecordings, OpenRecording
+from nvr.recordings.storage import GetStorageOverview, UpdateStoragePolicy
 from nvr.shared import errors
 from nvr.shared.events import EventBus
 from nvr.streaming.application import (
@@ -82,6 +83,10 @@ class UseCases(Protocol):
     def list_recordings(self) -> ListRecordings: ...
     @property
     def open_recording(self) -> OpenRecording: ...
+    @property
+    def get_storage_overview(self) -> GetStorageOverview: ...
+    @property
+    def update_storage_policy(self) -> UpdateStoragePolicy: ...
 
 
 def create_app(
@@ -112,6 +117,8 @@ def create_app(
         content: dict[str, object] = {"error": exc.code, "message": exc.message}
         if isinstance(exc, errors.ValidationFailed) and exc.fields:
             content["fields"] = exc.fields
+        if isinstance(exc, errors.ConfirmationRequired):
+            content["details"] = exc.details
         return JSONResponse(status_code=http_status, content=content)
 
     # Público: só o login. Todo o resto exige sessão (ADR-003).
@@ -123,5 +130,6 @@ def create_app(
     app.include_router(status.router, prefix="/api/v1", dependencies=protected)
     app.include_router(live.router, prefix="/api/v1", dependencies=protected)
     app.include_router(recordings.router, prefix="/api/v1", dependencies=protected)
+    app.include_router(storage.router, prefix="/api/v1", dependencies=protected)
     app.include_router(cameras.router, prefix="/api/v1", dependencies=protected)
     return app

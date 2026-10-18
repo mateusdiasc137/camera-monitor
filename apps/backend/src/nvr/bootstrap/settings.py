@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     ffmpeg_path: str = "ffmpeg"
     media_sync_interval: float = Field(default=15.0, description="segundos entre reconciliações")
     status_interval: float = Field(default=5.0, description="segundos entre amostras do estado das câmeras")
+    storage_interval: float = Field(default=60.0, description="segundos entre verificações da cota")
     index_interval: float = Field(
         default=30.0, description="segundos entre varreduras do índice de gravações"
     )

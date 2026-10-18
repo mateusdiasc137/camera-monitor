@@ -611,3 +611,84 @@ select {
   color: var(--text);
   text-decoration: none;
 }
+
+.usage__bar {
+  height: 14px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.usage__bar span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+
+.usage__bar--high span {
+  background: var(--degraded);
+}
+
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.9rem;
+}
+
+.usage-table caption {
+  text-align: left;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.usage-table th,
+.usage-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.radio-group {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-group legend {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.confirm {
+  border: 1px solid var(--down);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.confirm p {
+  margin: 0;
+}
+
+button.danger-solid {
+  background: var(--down);
+  color: #fff;
+}
+
+.notice--danger {
+  border-color: var(--down);
+}
+
+.storage .card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.storage .card p {
+  margin: 0;
+}

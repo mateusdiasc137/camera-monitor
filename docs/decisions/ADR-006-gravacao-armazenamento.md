@@ -1,6 +1,6 @@
 # ADR-006 — Gravação, índice e política de armazenamento
 
-**Estado:** aceito · **Data:** 17/10/2026 · **Revisão (F1-09):** índice por varredura; nome com fuso
+**Estado:** aceito · **Data:** 17/10/2026 · **Revisão (F1-09):** índice por varredura; nome com fuso · **(F1-11):** cota implementada
 
 ## Contexto
 
@@ -13,8 +13,13 @@ Requisitos do usuário: ligar/desligar a gravação por câmera, escolher o loca
   - cota global em GB no local de gravação;
   - `overwrite_oldest` (padrão) ou `stop_when_full`;
   - histerese: limpeza começa em 95% da cota e vai até 90%;
-  - piso físico de espaço livre (padrão 2 GB ou 2%) que age mesmo abaixo da cota;
+  - piso físico de espaço livre (2 GB) que age mesmo abaixo da cota e mesmo sem cota; quando dispara, limpa até 125% do piso;
   - nunca apaga o segmento aberto, arquivos modificados há < 30 s nem nada fora do diretório gerenciado; toda exclusão vai para o `audit_log`.
+- **Implementação (F1-11):** `EnforceStoragePolicy` roda a cada 60 s (e logo após mudar a política). Escolhe os mais antigos **entre todas as câmeras** pelo início do segmento; o arquivo mais novo de cada pasta de câmera **ativa** é protegido (pode estar aberto), mas pastas de câmeras removidas são apagadas por inteiro quando forem as mais antigas. Exclusão só de `.mp4` em `<pasta>/<arquivo>` dentro do local (sem links simbólicos); o índice é atualizado na hora.
+  - `stop_when_full`: nada é apagado; uma trava (`RecordingGate`) faz a reconciliação desligar `record` de todos os caminhos no MediaMTX (o ao vivo continua). Volta sozinha abaixo de 90% da cota com o piso folgado. O estado aparece na saúde do sistema (`storage: down`) e na aba Armazenamento.
+  - Reduzir a cota abaixo do já gravado com `overwrite_oldest` exige confirmação explícita (`409 confirmation_required` com a estimativa do que será apagado); a cota não pode passar do que cabe no disco (uso + livre − piso).
+  - Estimativa de dias: ritmo medido por câmera nas últimas 24 h do índice × capacidade até 90% da cota.
+  - Ensaio com a X6C-WEQ (segmentos de 20 s, cota de 12 MB): sobrescrever apagou os mais antigos sem parar a gravação; "parar de gravar" desligou `record` no MediaMTX e religou ao aumentar a cota.
 - **Índice no SQLite** (câmera, início, duração, bytes, local, caminho relativo), alimentado **só por varredura periódica** (30 s) do local de gravação (revisto na F1-09). O playback usa o servidor de playback do MediaMTX; o índice serve para timeline, gaps, cota e substituição.
   - `runOnRecordSegmentComplete` foi descartado pelo mesmo motivo do ADR-002: comandos externos do MediaMTX expandem `$` sem escape. A varredura também se corrige sozinha após quedas (arquivos novos, que cresceram ou que sumiram).
   - **Leitura própria do fMP4** (sem FFmpeg): início pela caixa `udta/mtxi` do MediaMTX (`NTP` em ns Unix, UTC); duração pelo `mvhd` (ms, escrito ao fechar) ou, em segmento interrompido, pelo último fragmento completo (`tfdt` + Σ `trun`), a mesma regra do MediaMTX. Validado contra o ffprobe em gravações da X6C-WEQ e em teste de integração com o MediaMTX real (diferença ≤ 0,35 s).

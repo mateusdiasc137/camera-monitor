@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy import delete, insert, select
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from nvr.persistence.tables import segments, storage_locations
-from nvr.recordings.domain import Segment
+from nvr.persistence.tables import segments, storage_locations, storage_policy
+from nvr.recordings.domain import ReplacementPolicy, Segment, StoragePolicy
 from nvr.recordings.ports import StorageLocation
 from nvr.shared.clock import Clock
 
@@ -107,3 +107,36 @@ class SqlSegmentIndex:
             for r in rows
         ]
         return [s for s in found if s.end_at > start]
+
+
+class SqlStoragePolicies:
+    def __init__(self, engine: AsyncEngine, clock: Clock) -> None:
+        self._engine, self._clock = engine, clock
+
+    async def get(self) -> StoragePolicy:
+        async with self._engine.connect() as conn:
+            row = (
+                (await conn.execute(select(storage_policy).where(storage_policy.c.id == 1))).mappings().one()
+            )
+        return StoragePolicy(
+            quota_bytes=row["quota_bytes"],
+            replacement=ReplacementPolicy(row["replacement"]),
+            high_watermark=row["high_watermark"],
+            low_watermark=row["low_watermark"],
+            min_free_bytes=row["min_free_bytes"],
+        )
+
+    async def save(self, policy: StoragePolicy) -> None:
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                update(storage_policy)
+                .where(storage_policy.c.id == 1)
+                .values(
+                    quota_bytes=policy.quota_bytes,
+                    replacement=policy.replacement.value,
+                    high_watermark=policy.high_watermark,
+                    low_watermark=policy.low_watermark,
+                    min_free_bytes=policy.min_free_bytes,
+                    updated_at=self._clock.now(),
+                )
+            )

@@ -174,3 +174,122 @@ def find_gaps(
     if end - cursor > min_gap:
         gaps.extend(split(cursor, end))
     return gaps
+
+
+# ------------------------------------------------------------- armazenamento
+
+GIB = 1024**3
+PROTECT_RECENT_S = 30.0  # arquivo mexido há menos que isso pode estar em gravação: nunca apagar
+
+
+class ReplacementPolicy(StrEnum):
+    OVERWRITE_OLDEST = "overwrite_oldest"  # apaga as gravações mais antigas (padrão)
+    STOP_WHEN_FULL = "stop_when_full"  # pausa a gravação e avisa; não apaga nada
+
+
+@dataclass(frozen=True)
+class StoragePolicy:
+    quota_bytes: int | None  # None: sem cota (só o piso de espaço livre vale)
+    replacement: ReplacementPolicy
+    high_watermark: float  # fração da cota que dispara a limpeza
+    low_watermark: float  # fração da cota até onde a limpeza vai
+    min_free_bytes: int  # piso físico de espaço livre no disco
+
+
+@dataclass(frozen=True)
+class DiskUsage:
+    total_bytes: int
+    free_bytes: int
+
+
+@dataclass(frozen=True)
+class StoredFile:
+    """Arquivo de gravação em disco, candidato (ou não) à substituição."""
+
+    rel_path: str
+    folder: str
+    start_at: datetime
+    size_bytes: int
+    modified_at: float  # epoch (s)
+
+
+class StorageState(StrEnum):
+    OK = "ok"
+    CLEANING = "cleaning"  # acima do limite: apagando os mais antigos
+    FULL = "full"  # limite atingido e nada (mais) pode ser apagado, ou política "parar"
+
+
+@dataclass(frozen=True)
+class CleanupPlan:
+    state: StorageState
+    reason: str  # "cota", "espaço livre" ou ""
+    delete: tuple[StoredFile, ...]
+    bytes_to_free: int
+    stop_recording: bool
+
+
+def protected_files(
+    files: Sequence[StoredFile], now_epoch: float, active_folders: set[str] | None = None
+) -> set[str]:
+    """Os mexidos há pouco e o mais recente de cada pasta ativa (pode estar em gravação).
+
+    Pastas de câmeras removidas (`active_folders` não as inclui) não gravam mais: o último arquivo delas
+    pode ser apagado — senão gravações órfãs ocupariam a cota para sempre.
+    """
+    newest: dict[str, StoredFile] = {}
+    for f in files:
+        if active_folders is not None and f.folder not in active_folders:
+            continue
+        current = newest.get(f.folder)
+        if current is None or f.start_at > current.start_at:
+            newest[f.folder] = f
+    recent = {f.rel_path for f in files if now_epoch - f.modified_at < PROTECT_RECENT_S}
+    return {f.rel_path for f in newest.values()} | recent
+
+
+def plan_cleanup(
+    policy: StoragePolicy,
+    files: Sequence[StoredFile],
+    disk: DiskUsage,
+    now_epoch: float,
+    active_folders: set[str] | None = None,
+) -> CleanupPlan:
+    """Decide o que apagar (ou se a gravação deve parar). Função pura; ver ADR-006.
+
+    Histerese: dispara acima de `high_watermark` da cota e limpa até `low_watermark`; o piso de espaço
+    livre dispara abaixo de `min_free_bytes` e limpa até 125% dele.
+    """
+    used = sum(f.size_bytes for f in files)
+    need = 0
+    reasons: list[str] = []
+    if policy.quota_bytes is not None and used > policy.quota_bytes * policy.high_watermark:
+        need = max(need, used - int(policy.quota_bytes * policy.low_watermark))
+        reasons.append("cota")
+    if disk.free_bytes < policy.min_free_bytes:
+        need = max(need, int(policy.min_free_bytes * 1.25) - disk.free_bytes)
+        reasons.append("espaço livre")
+    if need <= 0:
+        return CleanupPlan(StorageState.OK, "", (), 0, False)
+
+    reason = " e ".join(reasons)
+    if policy.replacement is ReplacementPolicy.STOP_WHEN_FULL:
+        return CleanupPlan(StorageState.FULL, reason, (), need, True)
+
+    keep = protected_files(files, now_epoch, active_folders)
+    chosen: list[StoredFile] = []
+    freed = 0
+    for f in sorted(files, key=lambda x: x.start_at):
+        if freed >= need:
+            break
+        if f.rel_path in keep:
+            continue
+        chosen.append(f)
+        freed += f.size_bytes
+    state = StorageState.CLEANING if freed >= need else StorageState.FULL
+    return CleanupPlan(state, reason, tuple(chosen), need, False)
+
+
+def should_resume_recording(policy: StoragePolicy, used_bytes: int, disk: DiskUsage) -> bool:
+    """Política "parar quando encher": só volta a gravar abaixo do limite inferior (histerese)."""
+    below_quota = policy.quota_bytes is None or used_bytes <= policy.quota_bytes * policy.low_watermark
+    return below_quota and disk.free_bytes >= policy.min_free_bytes * 1.25

@@ -4,12 +4,14 @@ import { AuthGate } from './features/auth/AuthGate'
 import { CamerasPage } from './features/cameras/CamerasPage'
 import { LivePage } from './features/live/LivePage'
 import { RecordingsPage } from './features/recordings/RecordingsPage'
+import { StoragePage } from './features/storage/StoragePage'
 import { SystemStatus } from './features/system/SystemStatus'
 
 const TABS = [
   { id: 'live', label: 'Ao vivo' },
   { id: 'recordings', label: 'Gravações' },
   { id: 'cameras', label: 'Câmeras' },
+  { id: 'storage', label: 'Armazenamento' },
   { id: 'system', label: 'Sistema' },
 ] as const
 
@@ -40,6 +42,7 @@ export default function App() {
             {tab === 'live' && <LivePage />}
             {tab === 'recordings' && <RecordingsPage />}
             {tab === 'cameras' && <CamerasPage isAdmin={user.role === 'admin'} />}
+            {tab === 'storage' && <StoragePage isAdmin={user.role === 'admin'} />}
             {tab === 'system' && <SystemStatus />}
           </>
         )}

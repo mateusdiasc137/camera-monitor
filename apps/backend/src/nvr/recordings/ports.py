@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
-from nvr.recordings.domain import Segment
+from nvr.recordings.domain import DiskUsage, Segment, StoragePolicy
 
 
 @dataclass(frozen=True)
@@ -54,6 +54,10 @@ class SegmentStore(Protocol):
 
     def probe(self, root: Path, rel_path: str) -> ProbedSegment: ...
 
+    def delete(self, root: Path, rel_path: str) -> None:
+        """Apaga um segmento (só dentro da raiz, só arquivos de gravação). Ausente = já apagado."""
+        ...
+
 
 class RecordingStream(Protocol):
     """Fluxo de bytes de um trecho gravado, aberto no servidor de playback (já validado: 200 OK)."""
@@ -66,3 +70,12 @@ class RecordingStream(Protocol):
 
 class PlaybackServer(Protocol):
     async def open(self, path: str, start: datetime, duration_s: float, fmt: str) -> RecordingStream: ...
+
+
+class StoragePolicies(Protocol):
+    async def get(self) -> StoragePolicy: ...
+    async def save(self, policy: StoragePolicy) -> None: ...
+
+
+class DiskProbe(Protocol):
+    def usage(self, path: Path) -> DiskUsage: ...

@@ -34,6 +34,11 @@ def build_app(container: Container) -> FastAPI:
     )
     container.monitor_camera_health.on_media_recovered = media_sync.trigger
     indexer = PeriodicTask("índice de gravações", settings.index_interval, container.index_segments)
+    storage = PeriodicTask(
+        "cota de armazenamento", settings.storage_interval, container.enforce_storage_policy
+    )
+    container.enforce_storage_policy.on_gate_change = media_sync.trigger
+    container.update_storage_policy.on_change = storage.trigger
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -42,10 +47,12 @@ def build_app(container: Container) -> FastAPI:
             media_sync.start()
             health_monitor.start()
             indexer.start()
+            storage.start()
             app.state.media_sync = media_sync
         try:
             yield
         finally:
+            await storage.stop()
             await indexer.stop()
             await health_monitor.stop()
             await media_sync.stop()

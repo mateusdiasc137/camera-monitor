@@ -27,11 +27,17 @@ from nvr.identity.adapters.memory_throttle import MemoryLoginThrottle
 from nvr.identity.adapters.sql_repositories import SqlSessionRepository, SqlUserRepository
 from nvr.identity.application import Authenticate, CreateUser, Login, Logout
 from nvr.persistence.database import create_engine
-from nvr.recordings.adapters.fs_store import FileSegmentStore
+from nvr.recordings.adapters.fs_store import FileSegmentStore, ShutilDiskProbe
 from nvr.recordings.adapters.mediamtx_playback import MediaMtxPlayback
-from nvr.recordings.adapters.sql_repositories import SqlSegmentIndex, SqlStorageLocations
+from nvr.recordings.adapters.sql_repositories import SqlSegmentIndex, SqlStorageLocations, SqlStoragePolicies
 from nvr.recordings.application import EnsureStorageLocation, IndexSegments, ListRecordings, OpenRecording
 from nvr.recordings.domain import RECORD_FILENAME_TEMPLATE
+from nvr.recordings.storage import (
+    EnforceStoragePolicy,
+    GetStorageOverview,
+    RecordingGate,
+    UpdateStoragePolicy,
+)
 from nvr.shared.clock import SystemClock
 from nvr.shared.events import EventBus
 from nvr.streaming.adapters.ffmpeg_relay import FfmpegRelaySupervisor
@@ -47,6 +53,7 @@ from nvr.streaming.application import (
 )
 from nvr.system.adapters.database_probe import DatabaseProbe
 from nvr.system.adapters.sql_audit import SqlAuditLog
+from nvr.system.adapters.storage_probe import StorageProbe
 from nvr.system.application import GetSystemHealth
 
 log = logging.getLogger(__name__)
@@ -80,6 +87,10 @@ class Container:
     list_recordings: ListRecordings
     segment_index: SqlSegmentIndex
     open_recording: OpenRecording
+    enforce_storage_policy: EnforceStoragePolicy
+    get_storage_overview: GetStorageOverview
+    update_storage_policy: UpdateStoragePolicy
+    recording_gate: RecordingGate
     playback: MediaMtxPlayback
     whep: MediaMtxWhep
 
@@ -131,11 +142,20 @@ def build_container(
         settings.mediamtx_playback_url, AuthorizeMediaAccess.READER_USER, reader_secret
     )
     segment_index = SqlSegmentIndex(engine, clock)
+    segment_store = FileSegmentStore()
+    disk = ShutilDiskProbe()
+    policies = SqlStoragePolicies(engine, clock)
+    gate = RecordingGate()
+    enforcer = EnforceStoragePolicy(
+        locations, policies, segment_store, segment_index, disk, gate, audit, clock, cameras
+    )
     status_log = SqlCameraStatusLog(engine)
     return Container(
         settings=settings,
         engine=engine,
-        get_system_health=GetSystemHealth(__version__, probes=[DatabaseProbe(engine)]),
+        get_system_health=GetSystemHealth(
+            __version__, probes=[DatabaseProbe(engine), StorageProbe(enforcer)]
+        ),
         create_user=CreateUser(users, hasher, clock),
         login=Login(users, sessions, hasher, MemoryLoginThrottle(), clock),
         logout=Logout(sessions),
@@ -146,12 +166,18 @@ def build_container(
         update_camera=UpdateCamera(*camera_deps),
         delete_camera=DeleteCamera(*camera_deps),
         test_camera_connection=TestCameraConnection(*camera_deps, probe=probe or RtspDescribeProbe()),
-        reconcile_media=ReconcileMedia(cameras, secrets, media_api, relays, record_path),
+        reconcile_media=ReconcileMedia(cameras, secrets, media_api, relays, record_path, gate),
         ensure_storage_location=EnsureStorageLocation(locations, recordings_dir),
-        index_segments=IndexSegments(locations, segment_index, FileSegmentStore(), cameras),
+        index_segments=IndexSegments(locations, segment_index, segment_store, cameras),
         list_recordings=ListRecordings(cameras, segment_index, status_log, clock),
         segment_index=segment_index,
         open_recording=OpenRecording(cameras, playback),
+        enforce_storage_policy=enforcer,
+        get_storage_overview=GetStorageOverview(
+            locations, policies, segment_store, segment_index, disk, cameras, enforcer, gate, clock
+        ),
+        update_storage_policy=UpdateStoragePolicy(locations, policies, segment_store, disk, audit),
+        recording_gate=gate,
         playback=playback,
         monitor_camera_health=MonitorCameraHealth(cameras, media_api, relays, status_log, event_bus, clock),
         get_camera_status_history=GetCameraStatusHistory(status_log),

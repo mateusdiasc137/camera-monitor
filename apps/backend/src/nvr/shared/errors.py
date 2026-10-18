@@ -35,6 +35,16 @@ class Conflict(AppError):
     code = "conflict"
 
 
+class ConfirmationRequired(Conflict):
+    """A operação tem efeito destrutivo: repetir com confirmação explícita. `details` explica o efeito."""
+
+    code = "confirmation_required"
+
+    def __init__(self, message: str, details: dict[str, object]) -> None:
+        super().__init__(message)
+        self.details = details
+
+
 class Unauthorized(AppError):
     code = "unauthorized"
 

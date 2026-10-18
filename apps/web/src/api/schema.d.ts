@@ -237,6 +237,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Storage */
+        get: operations["get_storage_api_v1_storage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storage/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Policy */
+        put: operations["update_policy_api_v1_storage_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/health": {
         parameters: {
             query?: never;
@@ -411,6 +445,43 @@ export interface components {
             /** Username */
             username?: string | null;
         };
+        /** CameraUsageOut */
+        CameraUsageOut: {
+            /** Bytes */
+            bytes: number;
+            /** Camera Id */
+            camera_id: string;
+            /**
+             * Camera Name
+             * @description null = câmera removida (gravações órfãs)
+             */
+            camera_name: string | null;
+            /** Gb Per Day */
+            gb_per_day: number | null;
+            /** Newest */
+            newest: string | null;
+            /** Oldest */
+            oldest: string | null;
+        };
+        /** CleanupOut */
+        CleanupOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Deleted Files */
+            deleted_files: number;
+            /** Freed Bytes */
+            freed_bytes: number;
+            /** Reason */
+            reason: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ok" | "cleaning" | "full";
+        };
         /** ComponentHealthOut */
         ComponentHealthOut: {
             /** Detail */
@@ -466,6 +537,42 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** PolicyIn */
+        PolicyIn: {
+            /**
+             * Confirm
+             * @description confirma apagar gravações se a cota for menor que o uso
+             * @default false
+             */
+            confirm?: boolean;
+            /**
+             * Quota Gb
+             * @description null = sem cota (só o piso de espaço livre)
+             */
+            quota_gb: number | null;
+            /**
+             * Replacement
+             * @default overwrite_oldest
+             * @enum {string}
+             */
+            replacement?: "overwrite_oldest" | "stop_when_full";
+        };
+        /** PolicyOut */
+        PolicyOut: {
+            /** High Watermark */
+            high_watermark: number;
+            /** Low Watermark */
+            low_watermark: number;
+            /** Min Free Gb */
+            min_free_gb: number;
+            /** Quota Gb */
+            quota_gb: number | null;
+            /**
+             * Replacement
+             * @enum {string}
+             */
+            replacement: "overwrite_oldest" | "stop_when_full";
+        };
         /** ProbeResultOut */
         ProbeResultOut: {
             /** Detail */
@@ -509,6 +616,27 @@ export interface components {
              * Format: date-time
              */
             start: string;
+        };
+        /** StorageOut */
+        StorageOut: {
+            /** Cameras */
+            cameras: components["schemas"]["CameraUsageOut"][];
+            /** Days Covered */
+            days_covered: number | null;
+            /** Disk Free Bytes */
+            disk_free_bytes: number;
+            /** Disk Total Bytes */
+            disk_total_bytes: number;
+            last_cleanup: components["schemas"]["CleanupOut"] | null;
+            /** Location Path */
+            location_path: string;
+            /** Pause Reason */
+            pause_reason: string;
+            policy: components["schemas"]["PolicyOut"];
+            /** Recording Paused */
+            recording_paused: boolean;
+            /** Used Bytes */
+            used_bytes: number;
         };
         /** SystemHealthOut */
         SystemHealthOut: {
@@ -1042,6 +1170,59 @@ export interface operations {
                 };
                 content: {
                     "video/mp4": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_storage_api_v1_storage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageOut"];
+                };
+            };
+        };
+    };
+    update_policy_api_v1_storage_policy_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyOut"];
                 };
             };
             /** @description Validation Error */
