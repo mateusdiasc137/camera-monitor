@@ -18,5 +18,25 @@
         "sha256": "180a235374a548d9133cdd5e20f5dbd8b01317be1c86e0d7e66df585dc42ed6f"
       }
     }
+  },
+  "caddy": {
+    "version": "v2.11.7",
+    "license": "Apache-2.0",
+    "source": "https://github.com/caddyserver/caddy",
+    "url": "https://github.com/caddyserver/caddy/releases/download/{version}/{asset}",
+    "assets": {
+      "windows-amd64": {
+        "asset": "caddy_2.11.7_windows_amd64.zip",
+        "sha512": "c308154504e53755958ffc62d8a2657ab17eefd6dd25c45dbb2c3d93d29519971f77ca652f7d0f2bcb7f980b9ba3822478865e29969d0272d7613550a43152b1"
+      },
+      "linux-amd64": {
+        "asset": "caddy_2.11.7_linux_amd64.tar.gz",
+        "sha512": "a7a433a1b133efc3c8d10eb0b99d52a24b5ef5c322dc77f5282182b1c0402139ab83f3a99f0c52409df77d20123fb0b523edad8a66d8f5e49136197bf61ef0e7"
+      },
+      "linux-arm64": {
+        "asset": "caddy_2.11.7_linux_arm64.tar.gz",
+        "sha512": "3db36ba90c7a6e8dda40ee3dd71fa08844c76b5fb08f61b31e5e78d2ed38e71c51dc7baed875e50d1ca1279196e84302967237386ae87c91ae9f2aaceada682e"
+      }
+    }
   }
 }

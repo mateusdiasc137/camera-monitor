@@ -1,0 +1,92 @@
+# Caddy: único ponto do NVR exposto na LAN (D1, ADR-003, ADR-007).
+#
+#   https://nvr-camera-monitor.local  (ou https://<IP fixo>)  →  /api/*  → backend (127.0.0.1:8000)
+#                                                             →  resto  → interface (arquivos estáticos)
+#   http://…/nvr-ca.crt  → certificado raiz da CA local, para instalar nos aparelhos
+#   http://…             → redireciona para https
+#
+# A mídia ao vivo (WebRTC) vai do MediaMTX ao navegador pela UDP 8189; a negociação passa pelo /api.
+# O MediaMTX e o backend escutam só em 127.0.0.1: nada além disto fica acessível pela rede.
+#
+# Variáveis (com o padrão de produção):
+#   NVR_SITE_ADDRESSES  nomes/IPs do certificado, separados por vírgula   (nvr-camera-monitor.local)
+#   NVR_BACKEND         backend FastAPI                                    (127.0.0.1:8000)
+#   NVR_WEB_ROOT        interface compilada (apps/web/dist)                (/opt/nvr/web)
+#   NVR_CA_DIR          pasta da CA local do Caddy (contém root.crt)       (/var/lib/caddy/.local/share/caddy/pki/authorities/local)
+#   NVR_HTTPS_PORT / NVR_HTTP_PORT                                         (443 / 80)
+#   NVR_HTTPS_SUFFIX    ":<porta>" no redirecionamento se o HTTPS não for 443 (vazio)
+#   NVR_CADDY_ADMIN     API de administração do Caddy                      (localhost:2019; "off" desliga)
+{
+	# Nunca instalar a raiz da CA no sistema por conta própria: quem confia é cada aparelho, por escolha.
+	skip_install_trust
+	admin {$NVR_CADDY_ADMIN:localhost:2019}
+	https_port {$NVR_HTTPS_PORT:443}
+	http_port {$NVR_HTTP_PORT:80}
+	# Sem redirecionamentos automáticos: o site http:// abaixo faz isso e serve o certificado da CA.
+	auto_https disable_redirects
+	pki {
+		ca local {
+			name "NVR Camera Monitor - CA local"
+		}
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+{$NVR_SITE_ADDRESSES:nvr-camera-monitor.local} {
+	tls internal
+
+	header {
+		# Só HTTPS daqui em diante; com a CA instalada não há aviso a ignorar.
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), geolocation=(), microphone=(self)"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
+		-Server
+	}
+
+	# Rotas internas do backend (autorização do MediaMTX) nunca passam pelo proxy.
+	handle /internal/* {
+		respond 404
+	}
+
+	handle /api/* {
+		request_body {
+			max_size 2MB
+		}
+		# SSE e vídeo passam em fluxo (o Caddy não acumula text/event-stream nem respostas longas).
+		reverse_proxy {$NVR_BACKEND:127.0.0.1:8000} {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * {$NVR_WEB_ROOT:/opt/nvr/web}
+		encode zstd gzip
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@page not path /assets/*
+		header @page Cache-Control "no-cache"
+		# Rotas da interface (SPA) caem no index.html.
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+http:// {
+	# O certificado raiz é público; confira a impressão digital (SHA-256) antes de confiar (guia).
+	handle /nvr-ca.crt {
+		root * {$NVR_CA_DIR:/var/lib/caddy/.local/share/caddy/pki/authorities/local}
+		rewrite * /root.crt
+		header Content-Type "application/x-x509-ca-cert"
+		header Content-Disposition "attachment; filename=\"nvr-ca.crt\""
+		file_server
+	}
+	handle {
+		redir https://{host}{$NVR_HTTPS_SUFFIX}{uri} 308
+	}
+}

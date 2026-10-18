@@ -36,6 +36,10 @@ Para abrir a interface no celular (mesma rede): `npm run dev -- --host` e acesse
 
 Com o MediaMTX rodando, o backend cria sozinho um path por câmera cadastrada (`cam-<id>-main`/`-sub`), sobe um relay FFmpeg para cada um e grava o perfil principal em `apps/backend/data/recordings/`. O local pode ser trocado na aba **Armazenamento**, dentro das pastas liberadas em `NVR_STORAGE_ROOTS` (JSON, ex.: `NVR_STORAGE_ROOTS='["D:/nvr"]'`; padrão: só a pasta inicial).
 
+## HTTPS (Caddy)
+
+O acesso pela rede é `https://nvr-camera-monitor.local` (ou `https://<IP>`), com uma CA própria do servidor que cada aparelho instala uma vez: veja [docs/operations/https-e-certificado.md](docs/operations/https-e-certificado.md) e o [ADR-007](docs/decisions/ADR-007-https-local.md). Para testar no PC de desenvolvimento: `npm run build` em `apps/web`, backend rodando e `python scripts/dev_caddy.py` (HTTPS em `:8443`).
+
 ## Saúde e logs
 
 - `GET /api/v1/system/ping` (sem login): só responde `{"status": "ok"}` enquanto o serviço atende — para systemd, proxy e monitoramento.

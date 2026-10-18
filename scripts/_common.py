@@ -65,14 +65,40 @@ def load_dotenv(path: Path = ROOT / ".env") -> dict[str, str]:
     return values
 
 
-def mediamtx_binary() -> Path:
+def tool_binary(name: str) -> Path:
+    """Binário baixado por fetch_tools.py (tools/<nome>/<versão>/<nome>[.exe])."""
     manifest = json.loads((ROOT / "tools" / "manifest.json").read_text(encoding="utf-8"))
-    version = manifest["mediamtx"]["version"]
-    name = "mediamtx.exe" if sys.platform == "win32" else "mediamtx"
-    binary = ROOT / "tools" / "mediamtx" / version / name
+    version = manifest[name]["version"]
+    binary = ROOT / "tools" / name / version / (f"{name}.exe" if sys.platform == "win32" else name)
     if not binary.exists():
-        raise SystemExit(f"MediaMTX não encontrado em {binary}. Rode: python scripts/fetch_tools.py")
+        raise SystemExit(f"{name} não encontrado em {binary}. Rode: python scripts/fetch_tools.py")
     return binary
+
+
+def mediamtx_binary() -> Path:
+    return tool_binary("mediamtx")
+
+
+def lan_ipv4() -> str | None:
+    """IPv4 desta máquina na LAN (rota padrão), sem enviar pacotes."""
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            s.connect(("10.255.255.255", 1))
+            return str(s.getsockname()[0])
+        except OSError:
+            return None
+
+
+def cert_fingerprint(pem_file: Path) -> str:
+    """SHA-256 do certificado, como os aparelhos mostram (AA:BB:...)."""
+    import hashlib
+    import ssl
+
+    der = ssl.PEM_cert_to_DER_cert(pem_file.read_text(encoding="ascii"))
+    digest = hashlib.sha256(der).hexdigest().upper()
+    return ":".join(digest[i : i + 2] for i in range(0, len(digest), 2))
 
 
 def require_tool(name: str) -> str:

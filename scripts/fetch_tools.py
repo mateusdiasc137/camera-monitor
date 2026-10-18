@@ -1,4 +1,4 @@
-"""Baixa os binários de terceiros fixados em tools/manifest.json e confere o SHA-256.
+"""Baixa os binários de terceiros fixados em tools/manifest.json e confere o hash (SHA-256 ou SHA-512).
 
 Uso: python scripts/fetch_tools.py [--force]
 Resultado: tools/<nome>/<versão>/<binário>
@@ -32,8 +32,8 @@ def platform_key() -> str:
     return f"{system}-{arch}"
 
 
-def sha256_of(path: Path) -> str:
-    digest = hashlib.sha256()
+def digest_of(path: Path, algorithm: str = "sha256") -> str:
+    digest = hashlib.new(algorithm)
     with path.open("rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             digest.update(chunk)
@@ -83,10 +83,12 @@ def fetch(name: str, spec: dict, force: bool) -> Path:
         print(f"{name}: baixando {url}")
         with urllib.request.urlopen(url, timeout=120) as resp, archive.open("wb") as out:
             shutil.copyfileobj(resp, out)
-        actual = sha256_of(archive)
-        if actual != entry["sha256"]:
-            raise SystemExit(f"{name}: SHA-256 diverge (esperado {entry['sha256']}, obtido {actual})")
-        print(f"{name}: SHA-256 conferido")
+        # O hash publicado pelo projeto: SHA-256 (MediaMTX) ou SHA-512 (Caddy).
+        algorithm = "sha512" if "sha512" in entry else "sha256"
+        actual = digest_of(archive, algorithm)
+        if actual != entry[algorithm]:
+            raise SystemExit(f"{name}: {algorithm} diverge (esperado {entry[algorithm]}, obtido {actual})")
+        print(f"{name}: {algorithm.upper()} conferido")
         if dest.exists():
             shutil.rmtree(dest)
         dest.mkdir(parents=True)

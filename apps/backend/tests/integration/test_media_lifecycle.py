@@ -6,6 +6,7 @@ aplicação cria os paths, mantém os relays e, ao desligar, encerra tudo sem tr
 
 import asyncio
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -49,14 +50,20 @@ def closed_port() -> int:
 
 
 def ffmpeg_pids() -> set[int]:
+    """FFmpeg filhos DESTE processo (os relays do teste), não os de outro NVR rodando na máquina."""
+    parent = os.getpid()
     if sys.platform == "win32":
+        query = (
+            f"Get-CimInstance Win32_Process -Filter \"Name='ffmpeg.exe' AND ParentProcessId={parent}\""
+            " | ForEach-Object ProcessId"
+        )
         out = subprocess.run(
-            ["tasklist", "/FI", "IMAGENAME eq ffmpeg.exe", "/FO", "CSV", "/NH"],
-            capture_output=True,
-            text=True,
+            ["powershell", "-NoProfile", "-Command", query], capture_output=True, text=True
         ).stdout
-        return {int(line.split('","')[1]) for line in out.splitlines() if line.startswith('"ffmpeg.exe"')}
-    out = subprocess.run(["pgrep", "-x", "ffmpeg"], capture_output=True, text=True).stdout
+    else:
+        out = subprocess.run(
+            ["pgrep", "-P", str(parent), "-x", "ffmpeg"], capture_output=True, text=True
+        ).stdout
     return {int(p) for p in out.split()}
 
 
@@ -124,6 +131,16 @@ def test_relays_start_and_shutdown_cleanly(
         assert response.status_code == 201
         camera_id = response.json()["id"]
         main = f"cam-{camera_id}-main"
+
+        # O filtro por processo-pai enxerga os relays do teste (no Windows cada tentativa dura ~10 s).
+        seen: set[int] = set()
+        for _ in range(30):
+            seen |= ffmpeg_pids() - before
+            if seen:
+                break
+            time.sleep(0.1)
+        if sys.platform == "win32":
+            assert seen, "o teste não enxergou os próprios relays"
 
         # No Windows, a conexão recusada só aparece após o -timeout do FFmpeg (10 s).
         deadline = time.monotonic() + 25
