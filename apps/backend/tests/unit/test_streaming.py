@@ -1,10 +1,12 @@
 from dataclasses import replace
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
 from nvr.cameras.adapters.secret_stores import MemorySecretStore
 from nvr.cameras.domain import Camera, CameraCredentials, CameraDriver, IngestMode, StreamProfile
+from nvr.recordings.location import ActiveRecordDir
 from nvr.shared.redact import redact
 from nvr.streaming.application import AuthorizeMediaAccess, MediaAccessRequest, ReconcileMedia
 from nvr.streaming.domain import PathSpec, PathState, RelaySpec, RelayStatus, parse_path_name, path_name
@@ -117,6 +119,44 @@ async def test_creates_paths_and_relays_only_main_records() -> None:
         "rtsp://10.0.0.210:554/user=admin&password=pw$&'1&channel=1&stream=0.sdp?"
     )
     assert "pw$" not in repr(relays.running[main])
+
+
+async def test_prepares_the_recording_folder_before_recording(tmp_path: Path) -> None:
+    """No servidor, a pasta precisa nascer do backend (grupo com escrita), não do MediaMTX (0755)."""
+    reconcile, media, _, repo = setup(camera())
+    prepared: list[str] = []
+    order: list[str] = []
+    real_put = media.put_path
+
+    async def put_path(spec: PathSpec) -> None:
+        order.append(f"put:{spec.name}")
+        await real_put(spec)
+
+    def prepare(name: str) -> None:
+        prepared.append(name)
+        order.append(f"prep:{name}")
+
+    media.put_path = put_path  # type: ignore[method-assign]
+    reconcile._prepare_recording = prepare
+    await reconcile()
+    main = path_name(CAM_ID, StreamProfile.MAIN)
+    assert prepared == [main]  # o substream não grava
+    assert order.index(f"prep:{main}") < order.index(f"put:{main}")
+
+    def broken(name: str) -> None:
+        raise PermissionError(13, "sem permissão")
+
+    reconcile._prepare_recording = broken  # falhar ao criar a pasta não derruba a reconciliação
+    repo.items[CAM_ID] = replace(repo.items[CAM_ID], name="Outro nome")
+    await reconcile()
+
+    record_dir = ActiveRecordDir(tmp_path)
+    record_dir.ensure_folder(main)
+    record_dir.ensure_folder(main)  # idempotente
+    assert (tmp_path / main).is_dir()
+    for bad in ("../fora", "a/b", ".."):
+        with pytest.raises(ValueError, match="inválido"):
+            record_dir.ensure_folder(bad)
 
 
 async def test_is_idempotent() -> None:

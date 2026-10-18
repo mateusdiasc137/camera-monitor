@@ -62,13 +62,19 @@ class ReconcileMedia:
         relays: RelaySupervisor,
         record_path: str | Callable[[], str],
         recording_allowed: Callable[[], bool] | None = None,
+        prepare_recording: Callable[[str], None] | None = None,
     ) -> None:
         """`record_path`: recordPath completo do MediaMTX (local de gravação + padrão de nome), ou função
-        que o devolve — o local pode mudar pela UI e a próxima reconciliação aplica (F1-11b)."""
+        que o devolve — o local pode mudar pela UI e a próxima reconciliação aplica (F1-11b).
+
+        `prepare_recording(path)`: cria a pasta de gravação do path antes de o MediaMTX gravar. No servidor,
+        o MediaMTX roda com outro usuário e cria pastas sem escrita para o grupo (modo fixo 0755): criadas
+        pelo backend, elas herdam o grupo compartilhado com escrita, e a cota consegue apagar (F1-19)."""
         self._cameras, self._secrets, self._media, self._relays = cameras, secrets, media, relays
         self._record_path: Callable[[], str] = record_path if callable(record_path) else (lambda: record_path)
         # Trava global (armazenamento cheio com a política "parar quando encher").
         self._recording_allowed = recording_allowed or (lambda: True)
+        self._prepare_recording = prepare_recording
         self._lock = asyncio.Lock()
 
     def _profiles(self, camera: Camera) -> list[StreamProfile]:
@@ -103,6 +109,11 @@ class ReconcileMedia:
         # mesmo que o adaptador os liste.
         current = {n: s for n, s in (await self._media.list_configured()).items() if parse_path_name(n)}
         for name, spec in desired_paths.items():
+            if spec.record and self._prepare_recording is not None:
+                try:
+                    await asyncio.to_thread(self._prepare_recording, name)
+                except OSError as exc:
+                    log.warning("pasta de gravação de %s não pôde ser criada: %s", name, exc)
             if name not in current:
                 await self._media.put_path(spec)
                 report.added.append(name)

@@ -209,7 +209,9 @@ def build_container(
         update_camera=UpdateCamera(*camera_deps),
         delete_camera=DeleteCamera(*camera_deps),
         test_camera_connection=TestCameraConnection(*camera_deps, probe=probe or RtspDescribeProbe()),
-        reconcile_media=ReconcileMedia(cameras, secrets, media_api, relays, record_dir.record_path, gate),
+        reconcile_media=ReconcileMedia(
+            cameras, secrets, media_api, relays, record_dir.record_path, gate, record_dir.ensure_folder
+        ),
         ensure_storage_location=EnsureStorageLocation(locations, recordings_dir, record_dir),
         index_segments=IndexSegments(locations, segment_index, segment_store, cameras),
         list_recordings=ListRecordings(cameras, segment_index, status_log, clock),

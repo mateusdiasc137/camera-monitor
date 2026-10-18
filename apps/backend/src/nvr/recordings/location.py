@@ -63,6 +63,13 @@ class ActiveRecordDir:
         # %z no nome: início sem ambiguidade de fuso/horário de verão (o MediaMTX entende ao reproduzir).
         return f"{self.path.as_posix()}/%path/{RECORD_FILENAME_TEMPLATE}"
 
+    def ensure_folder(self, path_name: str) -> None:
+        """Pasta de gravação do path (`%path` do recordPath), criada pelo backend: herda o grupo e a
+        permissão de escrita do grupo do local (setgid), que o MediaMTX não daria ao criá-la."""
+        if "/" in path_name or "\\" in path_name or path_name in ("", ".", ".."):
+            raise ValueError(f"nome de path inválido: {path_name}")
+        (self.path / path_name).mkdir(exist_ok=True)
+
 
 def managed_files(files: Sequence[SegmentFile]) -> list[SegmentFile]:
     """Só os segmentos em pastas de câmera do NVR (o resto da pasta nunca é tocado)."""
