@@ -146,7 +146,8 @@ jobs:
         run: |
           sudo infra/linux/uninstall.sh
           if systemctl list-unit-files | grep -q '^nvr-'; then echo "units do NVR ainda instaladas"; exit 1; fi
-          test -d /srv/nvr/recordings  # gravações nunca são apagadas
+          # gravações nunca são apagadas (sudo: /srv/nvr é 2770, fechado para quem não é do grupo nvr)
+          sudo find /srv/nvr -name '*.mp4' | grep -q .
 
   secrets:
     name: varredura de segredos
