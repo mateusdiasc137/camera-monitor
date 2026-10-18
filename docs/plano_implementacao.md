@@ -41,7 +41,8 @@
 - [x] F1-12 saúde do sistema: banco, servidor de vídeo, armazenamento, câmeras por estado e gravação em dia (último trecho por câmera; alerta se uma câmera que deveria gravar não grava); `/api/v1/system/ping` público; logs JSON opcionais com máscara de segredos (inclusive uvicorn e tracebacks); ensaio com a câmera real
 - [x] F1-13…F1-17 interface entregue junto com cada etapa (login, câmeras, ao vivo com reconexão, gravações com barra de corte, armazenamento, sistema); pendente: fallback HLS do ao vivo (F1-15)
 - [x] F1-18 HTTPS e proxy: Caddyfile de produção (CA local, nome `.local` + IP, cabeçalhos de segurança, CA servida por HTTP com conferência do SHA-256), `scripts/dev_caddy.py`, guia de instalação da CA por sistema (ADR-007); ensaio com a câmera real atrás do HTTPS. Falta o teste no celular do usuário
-- [ ] F1-19 serviços de SO (systemd no Ubuntu Server, firewall, Avahi; WinSW no Windows) (próximo)
+- [x] F1-19 serviços no Ubuntu Server: instalador idempotente (`infra/linux/install.sh`), units systemd com sandbox e usuários separados, Python e binários fixados, firewall da LAN e Avahi opcionais, `nvr-admin`, desinstalador, verificador; testado a cada mudança numa VM Ubuntu 24.04 do CI (ADR-008)
+- [ ] F1-19b serviço no Windows (WinSW, firewall do perfil Privado) (próximo)
 
 > Convenções: cada tarefa tem ID (`F1-07`), entregáveis, critério de "pronto" verificável e dependências.
 > 🔒 = exige autorização explícita do usuário antes de executar (altera estado da câmera ou age fisicamente).
