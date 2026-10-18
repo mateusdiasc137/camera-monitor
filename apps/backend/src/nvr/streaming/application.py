@@ -236,6 +236,9 @@ class MonitorCameraHealth:
         self._last_bytes: dict[str, int] = {}
         self._loaded = False
         self._media_down = False
+        # Última consulta ao servidor de mídia (para a saúde do sistema, sem consultá-lo de novo).
+        self.media_checked_at: datetime | None = None
+        self.media_error: str | None = None
         # O MediaMTX guarda os paths só em memória: ao voltar, é preciso reconciliar já (não em até 15 s).
         self.on_media_recovered: Callable[[], None] | None = None
 
@@ -256,6 +259,7 @@ class MonitorCameraHealth:
             media_error: str | None = None
         except AppError as exc:
             states, media_error = {}, exc.message
+        self.media_checked_at, self.media_error = self._clock.now(), media_error
         if self._media_down and media_error is None and self.on_media_recovered is not None:
             log.info("servidor de mídia voltou; reconciliando imediatamente")
             self.on_media_recovered()

@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=Path("./data"), description="banco, índice, snapshots e estado")
     bind_host: str = Field(default="127.0.0.1", description="o backend fica atrás do proxy HTTPS (ADR-003)")
     bind_port: int = 8000
+    log_format: Literal["text", "json"] = Field(
+        default="text", description="json: uma linha JSON por registro (journald/agregadores)"
+    )
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     cookie_secure: bool = Field(
         default=True, description="cookie de sessão só por HTTPS; desligar apenas em desenvolvimento local"
     )

@@ -67,7 +67,9 @@ from nvr.streaming.application import (
     MonitorCameraHealth,
     ReconcileMedia,
 )
+from nvr.system.adapters.camera_summaries import MonitoredCameraSummaries
 from nvr.system.adapters.database_probe import DatabaseProbe
+from nvr.system.adapters.media_probe import MediaServerProbe
 from nvr.system.adapters.sql_audit import SqlAuditLog
 from nvr.system.adapters.storage_probe import StorageProbe
 from nvr.system.application import GetSystemHealth
@@ -80,6 +82,7 @@ class Container:
     settings: Settings
     engine: AsyncEngine
     get_system_health: GetSystemHealth
+    log_secrets: tuple[str, ...]  # segredos desta execução: mascarados em qualquer log
     create_user: CreateUser
     login: Login
     logout: Logout
@@ -174,6 +177,7 @@ def build_container(
         locations, policies, segment_store, segment_index, disk, gate, audit, clock, cameras
     )
     status_log = SqlCameraStatusLog(engine)
+    monitor = MonitorCameraHealth(cameras, media_api, relays, status_log, event_bus, clock)
     roots = settings.resolved_storage_roots()
     storage_fs = LocalStorageFilesystem()
     migrations = SqlStorageMigrations(engine)
@@ -185,8 +189,16 @@ def build_container(
         settings=settings,
         engine=engine,
         get_system_health=GetSystemHealth(
-            __version__, probes=[DatabaseProbe(engine), StorageProbe(enforcer)]
+            __version__,
+            probes=[
+                DatabaseProbe(engine),
+                MediaServerProbe(monitor, relays, settings.media_enabled),
+                StorageProbe(enforcer),
+            ],
+            cameras=MonitoredCameraSummaries(cameras, monitor, segment_index, gate),
+            clock=clock,
         ),
+        log_secrets=(relay_secret, reader_secret),
         create_user=CreateUser(users, hasher, clock),
         login=Login(users, sessions, hasher, MemoryLoginThrottle(), clock),
         logout=Logout(sessions),
@@ -236,7 +248,7 @@ def build_container(
         ),
         migration_runner=runner,
         playback=playback,
-        monitor_camera_health=MonitorCameraHealth(cameras, media_api, relays, status_log, event_bus, clock),
+        monitor_camera_health=monitor,
         get_camera_status_history=GetCameraStatusHistory(status_log),
         event_bus=event_bus,
         authorize_media_access=AuthorizeMediaAccess(relay_secret, reader_secret),

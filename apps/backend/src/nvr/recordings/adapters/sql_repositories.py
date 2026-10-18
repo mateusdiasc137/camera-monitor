@@ -124,6 +124,21 @@ class SqlSegmentIndex:
             else:
                 await conn.execute(update(segments).where(old).values(location_id=to_location_id))
 
+    async def latest(self, camera_id: str) -> Segment | None:
+        query = (
+            select(segments)
+            .where(segments.c.camera_id == camera_id)
+            .order_by(segments.c.start_at.desc())
+            .limit(1)
+        )
+        async with self._engine.connect() as conn:
+            r = (await conn.execute(query)).mappings().first()
+        if r is None:
+            return None
+        return Segment(
+            r["camera_id"], r["location_id"], r["rel_path"], r["start_at"], r["duration_s"], r["size_bytes"]
+        )
+
     async def in_range(self, camera_id: str, start: datetime, end: datetime) -> list[Segment]:
         query = (
             select(segments)

@@ -141,8 +141,9 @@ def create_app(
             content["details"] = exc.details
         return JSONResponse(status_code=http_status, content=content)
 
-    # Público: só o login. Todo o resto exige sessão (ADR-003).
+    # Público: só o login e o "ping" de vida (sem detalhes). Todo o resto exige sessão (ADR-003).
     app.include_router(auth.router, prefix="/api/v1")
+    app.include_router(system.public_router, prefix="/api/v1")
     app.include_router(internal.router)  # só loopback; checado no próprio endpoint
     protected = [Depends(current_user)]
     app.include_router(system.router, prefix="/api/v1", dependencies=protected)

@@ -59,6 +59,10 @@ class SegmentIndex(Protocol):
 
     async def in_range(self, camera_id: str, start: datetime, end: datetime) -> list[Segment]: ...
 
+    async def latest(self, camera_id: str) -> Segment | None:
+        """O trecho mais recente da câmera (qualquer local)."""
+        ...
+
 
 class SegmentStore(Protocol):
     """Acesso aos arquivos de gravação (sistema de arquivos)."""

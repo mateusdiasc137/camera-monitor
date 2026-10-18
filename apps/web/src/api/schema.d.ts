@@ -374,6 +374,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/ping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ping
+         * @description Responde enquanto o processo atende requisições (verificação de vida, sem login).
+         */
+        get: operations["ping_api_v1_system_ping_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -495,6 +515,37 @@ export interface components {
              */
             state: "online" | "degraded" | "starting" | "offline" | "auth_error" | "not_found" | "disabled";
         };
+        /** CameraSummaryOut */
+        CameraSummaryOut: {
+            /** Camera Id */
+            camera_id: string;
+            /** Detail */
+            detail: string;
+            /**
+             * Last Recording At
+             * @description fim do último trecho gravado e indexado
+             */
+            last_recording_at: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Recording
+             * @description o servidor de mídia está gravando o perfil principal agora
+             */
+            recording: boolean;
+            /**
+             * Recording Expected
+             * @description ativa, gravação ligada e não pausada por falta de espaço
+             */
+            recording_expected: boolean;
+            /** Since */
+            since: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "online" | "degraded" | "starting" | "offline" | "auth_error" | "not_found" | "disabled";
+        };
         /**
          * CameraUpdateIn
          * @description Campos omitidos não mudam. Usuário e senha só são trocados se os dois forem enviados.
@@ -572,7 +623,10 @@ export interface components {
         ComponentHealthOut: {
             /** Detail */
             detail: string;
-            /** Name */
+            /**
+             * Name
+             * @description database | media_server | storage | cameras | recording
+             */
             name: string;
             /**
              * State
@@ -744,6 +798,15 @@ export interface components {
             /** Total Files */
             total_files: number;
         };
+        /** PingOut */
+        PingOut: {
+            /**
+             * Status
+             * @default ok
+             * @constant
+             */
+            status?: "ok";
+        };
         /** PolicyIn */
         PolicyIn: {
             /**
@@ -849,6 +912,13 @@ export interface components {
         };
         /** SystemHealthOut */
         SystemHealthOut: {
+            /**
+             * Cameras
+             * @default []
+             */
+            cameras?: components["schemas"]["CameraSummaryOut"][];
+            /** Checked At */
+            checked_at?: string | null;
             /** Components */
             components: components["schemas"]["ComponentHealthOut"][];
             /**
@@ -1600,6 +1670,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SystemHealthOut"];
+                };
+            };
+        };
+    };
+    ping_api_v1_system_ping_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PingOut"];
                 };
             };
         };

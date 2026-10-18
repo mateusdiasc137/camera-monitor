@@ -233,6 +233,82 @@
         "title": "CameraStatusOut",
         "type": "object"
       },
+      "CameraSummaryOut": {
+        "properties": {
+          "camera_id": {
+            "title": "Camera Id",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "last_recording_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "fim do último trecho gravado e indexado",
+            "title": "Last Recording At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "recording": {
+            "description": "o servidor de mídia está gravando o perfil principal agora",
+            "title": "Recording",
+            "type": "boolean"
+          },
+          "recording_expected": {
+            "description": "ativa, gravação ligada e não pausada por falta de espaço",
+            "title": "Recording Expected",
+            "type": "boolean"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "state": {
+            "enum": [
+              "online",
+              "degraded",
+              "starting",
+              "offline",
+              "auth_error",
+              "not_found",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "camera_id",
+          "name",
+          "state",
+          "detail",
+          "since",
+          "recording_expected",
+          "recording",
+          "last_recording_at"
+        ],
+        "title": "CameraSummaryOut",
+        "type": "object"
+      },
       "CameraUpdateIn": {
         "description": "Campos omitidos não mudam. Usuário e senha só são trocados se os dois forem enviados.",
         "properties": {
@@ -508,6 +584,7 @@
             "type": "string"
           },
           "name": {
+            "description": "database | media_server | storage | cameras | recording",
             "title": "Name",
             "type": "string"
           },
@@ -944,6 +1021,18 @@
         "title": "MigrationOut",
         "type": "object"
       },
+      "PingOut": {
+        "properties": {
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "PingOut",
+        "type": "object"
+      },
       "PolicyIn": {
         "properties": {
           "confirm": {
@@ -1220,6 +1309,26 @@
       },
       "SystemHealthOut": {
         "properties": {
+          "cameras": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CameraSummaryOut"
+            },
+            "title": "Cameras",
+            "type": "array"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
           "components": {
             "items": {
               "$ref": "#/components/schemas/ComponentHealthOut"
@@ -2361,6 +2470,28 @@
           }
         },
         "summary": "Get Health",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/v1/system/ping": {
+      "get": {
+        "description": "Responde enquanto o processo atende requisições (verificação de vida, sem login).",
+        "operationId": "ping_api_v1_system_ping_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ping",
         "tags": [
           "system"
         ]

@@ -19,16 +19,30 @@ class FakeUseCases:
     authenticate: object = None
 
 
-def make_client() -> TestClient:
+def make_client(logged_in: bool = True) -> TestClient:
     app = create_app(FakeUseCases(GetSystemHealth("0.0.1", probes=[])))  # type: ignore[arg-type]
-    app.dependency_overrides[current_user] = lambda: VIEWER
+    if logged_in:
+        app.dependency_overrides[current_user] = lambda: VIEWER
     return TestClient(app)
 
 
 def test_health_endpoint_contract() -> None:
     response = make_client().get("/api/v1/system/health")
     assert response.status_code == 200
-    assert response.json() == {"version": "0.0.1", "state": "ok", "components": []}
+    assert response.json() == {
+        "version": "0.0.1",
+        "state": "ok",
+        "components": [],
+        "cameras": [],
+        "checked_at": None,
+    }
+
+
+def test_ping_is_public_and_reveals_nothing() -> None:
+    client = make_client(logged_in=False)
+    ping = client.get("/api/v1/system/ping")
+    assert ping.status_code == 200
+    assert ping.json() == {"status": "ok"}
 
 
 def test_openapi_is_published_under_api_v1() -> None:

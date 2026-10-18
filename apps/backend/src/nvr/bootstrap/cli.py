@@ -6,7 +6,6 @@ import argparse
 import asyncio
 import getpass
 import json
-import logging
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -16,6 +15,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from nvr.bootstrap.container import Container, build_container
+from nvr.bootstrap.logging_setup import configure_logging
 from nvr.bootstrap.settings import Settings
 from nvr.http.app import create_app
 from nvr.identity.domain import Role
@@ -108,14 +108,16 @@ def main(argv: list[str] | None = None) -> int:
     for stream in (sys.stdout, sys.stderr):  # logs em UTF-8 também no Windows (cp1252 corrompe acentos)
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    logging.getLogger("httpx").setLevel(logging.WARNING)  # a reconciliação consulta o MediaMTX a cada ciclo
     settings = Settings()
+    redactor = configure_logging(settings.log_format, settings.log_level)
     if args.cmd == "migrate":
         migrate(settings.data_dir)
     elif args.cmd == "serve":
         migrate(settings.data_dir)
-        uvicorn.run(build_app(build_container(settings)), host=settings.bind_host, port=settings.bind_port)
+        container = build_container(settings)
+        redactor.add_secrets(*container.log_secrets)
+        # log_config=None: os logs do uvicorn (acesso e erros) passam pelo mesmo handler com máscara.
+        uvicorn.run(build_app(container), host=settings.bind_host, port=settings.bind_port, log_config=None)
     elif args.cmd == "create-user":
         migrate(settings.data_dir)
         return asyncio.run(_create_user(settings, args.username, Role(args.role)))

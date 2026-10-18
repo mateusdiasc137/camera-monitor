@@ -36,6 +36,12 @@ Para abrir a interface no celular (mesma rede): `npm run dev -- --host` e acesse
 
 Com o MediaMTX rodando, o backend cria sozinho um path por câmera cadastrada (`cam-<id>-main`/`-sub`), sobe um relay FFmpeg para cada um e grava o perfil principal em `apps/backend/data/recordings/`. O local pode ser trocado na aba **Armazenamento**, dentro das pastas liberadas em `NVR_STORAGE_ROOTS` (JSON, ex.: `NVR_STORAGE_ROOTS='["D:/nvr"]'`; padrão: só a pasta inicial).
 
+## Saúde e logs
+
+- `GET /api/v1/system/ping` (sem login): só responde `{"status": "ok"}` enquanto o serviço atende — para systemd, proxy e monitoramento.
+- `GET /api/v1/system/health` (com login) e aba **Sistema**: banco, servidor de vídeo (MediaMTX), armazenamento, câmeras por estado e gravação em dia (último trecho de cada câmera; alerta se uma câmera que deveria gravar fica mais de 3 min sem arquivo novo).
+- Logs: `NVR_LOG_FORMAT=json` grava uma linha JSON por registro (inclusive os do uvicorn); `NVR_LOG_LEVEL` ajusta o nível. Em qualquer formato, credenciais em URLs/caminhos e os segredos internos são trocados por `***`.
+
 ## Pré-requisitos
 
 - Python 3.12+

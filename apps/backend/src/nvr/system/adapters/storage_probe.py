@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from nvr.recordings.domain import GIB, StorageState
-from nvr.recordings.storage import EnforceStoragePolicy
+from nvr.recordings.domain import StorageState
+from nvr.recordings.storage import EnforceStoragePolicy, gb_text
 from nvr.system.domain import ComponentHealth, HealthState
 
 
@@ -15,7 +15,7 @@ class StorageProbe:
         last = self._enforcer.last
         if last is None:
             return ComponentHealth("storage", HealthState.OK, "aguardando a primeira verificação")
-        free = f"{last.disk.free_bytes / GIB:.1f} GB livres" if last.disk else ""
+        free = f"{gb_text(last.disk.free_bytes)} GB livres" if last.disk else ""
         if last.recording_paused:
             return ComponentHealth(
                 "storage", HealthState.DOWN, f"gravação pausada: armazenamento cheio; {free}"
@@ -27,5 +27,5 @@ class StorageProbe:
                 f"limite de {last.reason} atingido e nada mais a apagar; {free}",
             )
         return ComponentHealth(
-            "storage", HealthState.OK, f"{last.used_bytes / GIB:.1f} GB em gravações; {free}"
+            "storage", HealthState.OK, f"{gb_text(last.used_bytes)} GB em gravações; {free}"
         )

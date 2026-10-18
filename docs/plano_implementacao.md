@@ -38,7 +38,9 @@
 - [x] F1-11 cota de armazenamento e substituição dos mais antigos (ou parar de gravar); aba Armazenamento com uso por câmera e estimativa de dias; ensaio com a câmera real
 - [x] F1-11b local de gravação pela UI (navegação nas raízes permitidas, validação, troca a quente com migração retomável ou começo do zero); reprodução atravessa buracos curtos; ensaio com a câmera real
 - [x] Gravações: barra de corte com zoom abaixo do vídeo; download só do intervalo marcado (junta trechos com buracos) e por lente, sem recodificar
-- [ ] F1-12 saúde do sistema (observabilidade) (próximo)
+- [x] F1-12 saúde do sistema: banco, servidor de vídeo, armazenamento, câmeras por estado e gravação em dia (último trecho por câmera; alerta se uma câmera que deveria gravar não grava); `/api/v1/system/ping` público; logs JSON opcionais com máscara de segredos (inclusive uvicorn e tracebacks); ensaio com a câmera real
+- [x] F1-13…F1-17 interface entregue junto com cada etapa (login, câmeras, ao vivo com reconexão, gravações com barra de corte, armazenamento, sistema); pendente: fallback HLS do ao vivo (F1-15)
+- [ ] F1-18 HTTPS e proxy (Caddy, `nvr-camera-monitor.local`) (próximo)
 
 > Convenções: cada tarefa tem ID (`F1-07`), entregáveis, critério de "pronto" verificável e dependências.
 > 🔒 = exige autorização explícita do usuário antes de executar (altera estado da câmera ou age fisicamente).
